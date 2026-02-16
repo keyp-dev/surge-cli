@@ -1,0 +1,47 @@
+{
+  description = "Surge TUI - Terminal user interface for macOS Surge proxy management";
+
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    flake-utils.url = "github:numtide/flake-utils";
+  };
+
+  outputs = { self, nixpkgs, flake-utils }:
+    flake-utils.lib.eachDefaultSystem (system:
+      let
+        pkgs = nixpkgs.legacyPackages.${system};
+      in
+      {
+        packages.default = pkgs.rustPlatform.buildRustPackage {
+          pname = "surge-tui";
+          version = "0.1.0";
+
+          src = ./.;
+
+          cargoLock = {
+            lockFile = ./Cargo.lock;
+          };
+
+          # Build with English as default
+          buildFeatures = [ "lang-en-us" ];
+
+          meta = with pkgs.lib; {
+            description = "Terminal user interface for macOS Surge proxy management";
+            homepage = "https://github.com/YOUR_USERNAME/surge-tui";
+            license = licenses.mit;
+            platforms = platforms.darwin;
+          };
+        };
+
+        devShells.default = pkgs.mkShell {
+          buildInputs = with pkgs; [
+            rustc
+            cargo
+            rust-analyzer
+            clippy
+            rustfmt
+          ];
+        };
+      }
+    );
+}

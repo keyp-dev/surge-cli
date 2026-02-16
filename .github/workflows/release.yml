@@ -1,0 +1,52 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-release:
+    name: Build Release
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build English version
+        run: |
+          cargo build --release
+          mv target/release/surge-tui surge-tui-en
+
+      - name: Build Chinese version
+        run: |
+          cargo build --release --no-default-features --features lang-zh-cn
+          mv target/release/surge-tui surge-tui-zh
+
+      - name: Create archives
+        run: |
+          tar -czf surge-tui-${GITHUB_REF_NAME}-macos-en.tar.gz surge-tui-en
+          tar -czf surge-tui-${GITHUB_REF_NAME}-macos-zh.tar.gz surge-tui-zh
+          shasum -a 256 *.tar.gz > checksums.txt
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            surge-tui-*.tar.gz
+            checksums.txt
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

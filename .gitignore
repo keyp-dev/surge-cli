@@ -1,0 +1,28 @@
+# 本地配置
+*.local
+.env
+surge-tui.toml
+
+# macOS
+.DS_Store
+
+# 编辑器
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 日志
+*.log
+
+# 缓存
+.cache/
+
+tmp/
+
+# Added by cargo
+
+/target
+
+.mcp.json
