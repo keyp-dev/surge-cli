@@ -23,6 +23,7 @@ pub struct SurgeConfig {
     pub http_api_port: u16,
 
     /// HTTP API key
+    #[serde(default)]
     pub http_api_key: String,
 
     /// surge-cli path
@@ -89,55 +90,49 @@ impl Config {
         Ok(config)
     }
 
-    /// Load config from environment variables
-    pub fn from_env() -> Self {
-        let mut config = Config::default();
+    /// Load config (file + env var overlay)
+    pub fn load(config_path: Option<PathBuf>) -> anyhow::Result<Self> {
+        let file_config = if let Some(path) = config_path {
+            if path.exists() {
+                Self::from_file(&path).ok()
+            } else {
+                None
+            }
+        } else {
+            // Build default paths with proper ~ expansion
+            let home = std::env::var("HOME").unwrap_or_default();
+            let default_paths = vec![
+                PathBuf::from("surge-tui.toml"),
+                PathBuf::from(format!("{}/.config/surge-tui/surge-tui.toml", home)),
+                PathBuf::from(format!("{}/.config/surge-tui/config.toml", home)),
+            ];
 
+            default_paths
+                .into_iter()
+                .filter(|p| p.exists())
+                .find_map(|p| Self::from_file(&p).ok())
+        };
+
+        // Start from file config or defaults
+        let mut config = file_config.unwrap_or_default();
+
+        // Always overlay env vars (env takes precedence over file for key/host/port)
         if let Ok(host) = std::env::var("SURGE_HTTP_API_HOST") {
             config.surge.http_api_host = host;
         }
-
         if let Ok(port) = std::env::var("SURGE_HTTP_API_PORT") {
             if let Ok(port) = port.parse() {
                 config.surge.http_api_port = port;
             }
         }
-
         if let Ok(key) = std::env::var("SURGE_HTTP_API_KEY") {
             config.surge.http_api_key = key;
         }
-
         if let Ok(path) = std::env::var("SURGE_CLI_PATH") {
             config.surge.cli_path = Some(path);
         }
 
-        config
-    }
-
-    /// Load config (prioritize file, fallback to environment variables)
-    pub fn load(config_path: Option<PathBuf>) -> anyhow::Result<Self> {
-        if let Some(path) = config_path {
-            if path.exists() {
-                return Self::from_file(&path);
-            }
-        }
-
-        // Try default paths
-        let default_paths = vec![
-            PathBuf::from("surge-tui.toml"),
-            PathBuf::from("~/.config/surge-tui/config.toml"),
-        ];
-
-        for path in default_paths {
-            if path.exists() {
-                if let Ok(config) = Self::from_file(&path) {
-                    return Ok(config);
-                }
-            }
-        }
-
-        // Fallback to environment variables
-        Ok(Self::from_env())
+        Ok(config)
     }
 
     /// Generate example config file
