@@ -24,15 +24,15 @@ rm Cargo.toml.bak
 # 2. Build release binaries
 echo "🔨 Building release binaries..."
 echo "  - English version (default)"
-cargo build --release
+/Users/keyp/.cargo/bin/cargo build --release
 
 echo "  - Chinese version"
-cargo build --release --no-default-features --features lang-zh-cn
+/Users/keyp/.cargo/bin/cargo build --release --no-default-features --features lang-zh-cn
 mv target/release/surge-tui target/release/surge-tui-zh
 
 # 3. Run tests
 echo "🧪 Running tests..."
-cargo test --release
+/Users/keyp/.cargo/bin/cargo test --release
 
 # 4. Create archives
 echo "📦 Creating archives..."

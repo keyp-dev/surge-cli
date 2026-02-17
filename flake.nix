@@ -27,7 +27,7 @@
 
           meta = with pkgs.lib; {
             description = "Terminal user interface for macOS Surge proxy management";
-            homepage = "https://github.com/YOUR_USERNAME/surge-tui";
+            homepage = "https://github.com/keyp-dev/surge-cli";
             license = licenses.mit;
             platforms = platforms.darwin;
           };

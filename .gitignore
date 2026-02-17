@@ -26,3 +26,5 @@ tmp/
 /target
 
 .mcp.json
+
+dist/

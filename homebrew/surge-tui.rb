@@ -2,9 +2,9 @@ class SurgeTui < Formula
   desc "Terminal user interface for macOS Surge proxy management"
   homepage "https://github.com/keyp-dev/surge-cli"
   url "https://github.com/keyp-dev/surge-cli/archive/refs/tags/v0.1.0.tar.gz"
-  sha256 "" # Will be calculated after first release
+  sha256 "79d9b8ba3ad8eb2b97714d79bb611ce9f3933c225f23448f9a8c8ce135f57153"
   license "MIT"
-  head "https://github.com/YOUR_USERNAME/surge-tui.git", branch: "main"
+  head "https://github.com/keyp-dev/surge-cli.git", branch: "main"
 
   depends_on "rust" => :build
 
