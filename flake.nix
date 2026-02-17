@@ -14,19 +14,26 @@
       {
         packages.default = pkgs.rustPlatform.buildRustPackage {
           pname = "surge-tui";
-          version = "0.1.0";
-
+          version = "0.1.1";
           src = ./.;
-
-          cargoLock = {
-            lockFile = ./Cargo.lock;
-          };
-
-          # Build with English as default
+          cargoLock.lockFile = ./Cargo.lock;
           buildFeatures = [ "lang-en-us" ];
-
           meta = with pkgs.lib; {
             description = "Terminal user interface for macOS Surge proxy management";
+            homepage = "https://github.com/keyp-dev/surge-cli";
+            license = licenses.mit;
+            platforms = platforms.darwin;
+          };
+        };
+
+        packages.zh-cn = pkgs.rustPlatform.buildRustPackage {
+          pname = "surge-tui";
+          version = "0.1.1";
+          src = ./.;
+          cargoLock.lockFile = ./Cargo.lock;
+          buildFeatures = [ "lang-zh-cn" ];
+          meta = with pkgs.lib; {
+            description = "Terminal user interface for macOS Surge proxy management (Chinese)";
             homepage = "https://github.com/keyp-dev/surge-cli";
             license = licenses.mit;
             platforms = platforms.darwin;
