@@ -1,4 +1,4 @@
-/// Policies 组件 - 策略和策略组显示
+/// Policies component - displays policies and policy groups
 use crate::domain::entities::AppSnapshot;
 use crate::i18n::Translate;
 use ratatui::{
@@ -23,7 +23,7 @@ pub fn render(
     search_mode: bool,
     t: &'static dyn Translate,
 ) {
-    // 分割区域：策略组 | 策略列表
+    // Split area: policy groups | policy list
     let chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
@@ -54,37 +54,37 @@ pub fn render(
     );
 }
 
-/// 递归查找策略组最终选中的真实策略（不是策略组）
+/// Recursively find the final real policy selected in a policy group (not another group)
 ///
-/// 例如：Proxy → US_Servers → us-bwg-la-dc1-vmess
-/// 返回：Some("us-bwg-la-dc1-vmess")
+/// Example: Proxy → US_Servers → us-bwg-la-dc1-vmess
+/// Returns: Some("us-bwg-la-dc1-vmess")
 fn resolve_final_policy(
     snapshot: &AppSnapshot,
     policy_name: &str,
     visited: &mut HashSet<String>,
 ) -> Option<String> {
-    // 防止循环引用
+    // Prevent circular references
     if visited.contains(policy_name) || visited.len() > 10 {
         return None;
     }
     visited.insert(policy_name.to_string());
 
-    // 查找是否是策略组
+    // Check if this is a policy group
     if let Some(group) = snapshot
         .policy_groups
         .iter()
         .find(|g| g.name == policy_name)
     {
-        // 是策略组，继续递归查找它的选中策略
+        // It is a group: recursively find its selected policy
         if let Some(selected) = &group.selected {
             return resolve_final_policy(snapshot, selected, visited);
         } else {
-            // 策略组没有选中任何策略
+            // Group has no selected policy
             return None;
         }
     }
 
-    // 不是策略组，就是真实策略
+    // Not a group: this is a real policy
     Some(policy_name.to_string())
 }
 
@@ -136,7 +136,7 @@ fn render_policy_groups(
                 .map(|s| format!(" → {}", s))
                 .unwrap_or_default();
 
-            // 检查是否正在测试
+            // Check if this group is currently being tested
             let is_testing = testing_group.map(|tg| tg == group.name).unwrap_or(false);
 
             let mut spans = vec![Span::styled(
@@ -147,7 +147,7 @@ fn render_policy_groups(
             )];
 
             if is_testing {
-                // 显示测试中状态
+                // Show testing status
                 spans.push(Span::styled(
                     " [Testing... Press R to refresh]",
                     Style::default()
@@ -155,29 +155,28 @@ fn render_policy_groups(
                         .add_modifier(Modifier::BOLD),
                 ));
             } else {
-                // 显示选中的策略
+                // Show selected policy
                 spans.push(Span::styled(
                     selected_text,
                     Style::default().fg(Color::Green),
                 ));
 
-                // 递归查找最终选中的真实策略（处理策略组嵌套）
+                // Recursively find the final real policy (handles nested groups)
                 if let Some(selected_policy_name) = &group.selected {
                     let mut visited = HashSet::new();
                     if let Some(final_policy_name) =
                         resolve_final_policy(snapshot, selected_policy_name, &mut visited)
                     {
-                        // 查找最终策略的测试结果
+                        // Look up test results for the final resolved policy
                         if let Some(policy_detail) = snapshot
                             .policies
                             .iter()
                             .find(|p| p.name == final_policy_name)
                         {
-                            // 有测试结果：显示延迟或可用状态
+                            // Test result available: show latency or availability
                             if policy_detail.alive {
                                 if let Some(latency) = policy_detail.latency {
-                                    // 根据延迟值设置颜色
-                                    // < 100ms 青色，100-300ms 黄色，> 300ms 红色
+                                    // Color by latency: <100ms cyan, 100-300ms yellow, >300ms red
                                     let latency_color = if latency < 100 {
                                         Color::Cyan
                                     } else if latency < 300 {
@@ -215,7 +214,7 @@ fn render_policy_groups(
         })
         .collect();
 
-    // btop 风格的标题：嵌入带颜色的快捷键
+    // btop-style title: embed colored shortcut keys
     let title = if search_mode {
         Line::from(vec![
             Span::raw(" "),
@@ -263,10 +262,10 @@ fn render_policy_groups(
     };
 
     let highlight_style = if in_detail_mode {
-        // 在策略组内部时，降低策略组列表的突出度
+        // In policy detail mode: reduce emphasis on group list
         Style::default().bg(Color::DarkGray)
     } else {
-        // 在策略组列表时，正常高亮
+        // In group list mode: normal highlight
         Style::default()
             .bg(Color::DarkGray)
             .add_modifier(Modifier::BOLD)
@@ -314,11 +313,11 @@ fn render_policy_group_policies(
             .collect()
     };
 
-    // 获取选中的策略组（从过滤后的列表）
+    // Get the selected group from the filtered list
     let selected_group = if selected < filtered_groups.len() {
         filtered_groups[selected]
     } else {
-        // 无效索引，显示空
+        // Invalid index, show empty
         let empty = Paragraph::new(t.policy_no_selection()).block(
             Block::default()
                 .borders(Borders::ALL)
@@ -356,7 +355,7 @@ fn render_policy_group_policies(
     let items: Vec<ListItem> = filtered_policies
         .iter()
         .map(|policy_item| {
-            // 只有当前选中的策略才显示 ✓
+            // Only show ✓ for the currently selected policy
             let is_selected = selected_group
                 .selected
                 .as_ref()
@@ -373,25 +372,24 @@ fn render_policy_group_policies(
 
             let selected_marker = if is_selected { "✓ " } else { "  " };
 
-            // 查找延迟数据（支持嵌套策略组）
+            // Look up latency data (supports nested policy groups)
             let (status_text, status_color) = {
-                // 先尝试递归查找最终策略（处理策略组嵌套）
+                // First try to resolve the final policy recursively (handles nesting)
                 let mut visited = HashSet::new();
                 let final_policy_name =
                     resolve_final_policy(snapshot, &policy_item.name, &mut visited)
                         .unwrap_or_else(|| policy_item.name.clone());
 
-                // 查找最终策略的测试结果
+                // Look up test results for the final resolved policy
                 if let Some(detail) = snapshot
                     .policies
                     .iter()
                     .find(|p| p.name == final_policy_name)
                 {
-                    // 有延迟数据：显示延迟或失败
+                    // Latency data available: show latency or failure
                     if detail.alive {
                         if let Some(latency) = detail.latency {
-                            // 根据延迟值设置颜色
-                            // < 100ms 青色，100-300ms 黄色，> 300ms 红色
+                            // Color by latency: <100ms cyan, 100-300ms yellow, >300ms red
                             let latency_color = if latency < 100 {
                                 Color::Cyan
                             } else if latency < 300 {
@@ -407,7 +405,7 @@ fn render_policy_group_policies(
                         (" [Unavailable]".to_string(), Color::Red)
                     }
                 } else {
-                    // 无延迟数据：检查 available_policies
+                    // No latency data: check available_policies
                     if let Some(ref available) = selected_group.available_policies {
                         if available.contains(&policy_item.name) {
                             (" [Available]".to_string(), Color::Green)
@@ -420,15 +418,15 @@ fn render_policy_group_policies(
                 }
             };
 
-            // 根据终端宽度动态计算列宽
+            // Dynamically compute column widths based on terminal width
             let (name_width, protocol_width, _status_width) =
                 calculate_policy_column_widths(area.width);
 
-            // 截断策略名和类型描述以防重叠
+            // Truncate policy name and type description to prevent overlap
             let truncated_name = truncate_text(&policy_item.name, name_width);
             let truncated_type = truncate_text(&policy_item.type_description, protocol_width);
 
-            // 根据协议类型选择颜色
+            // Choose color based on protocol type
             let protocol_color = match policy_item.type_description.as_str() {
                 s if s.contains("Shadowsocks") => Color::Blue,
                 s if s.contains("VMess") => Color::Magenta,
@@ -457,7 +455,7 @@ fn render_policy_group_policies(
         })
         .collect();
 
-    // btop 风格的标题：嵌入带颜色的快捷键
+    // btop-style title: embed colored shortcut keys
     let title = if search_mode {
         // In search mode, show the policy search query (for detail mode)
         Line::from(vec![
@@ -516,7 +514,7 @@ fn render_policy_group_policies(
         )
         .highlight_symbol("▶ ");
 
-    // 如果在策略组内部，使用 stateful 渲染高亮选中的策略
+    // In policy detail mode: use stateful rendering to highlight selected policy
     if let Some(idx) = policy_detail_index {
         let mut state = ListState::default();
         if !filtered_policies.is_empty() {
@@ -528,9 +526,9 @@ fn render_policy_group_policies(
     }
 }
 
-/// 截断文本到指定显示宽度（考虑 CJK 字符占 2 宽度）
+/// Truncate text to a specified display width (CJK characters count as width 2)
 ///
-/// 使用 unicode-width 正确计算中英文混排的显示宽度
+/// Uses unicode-width to correctly compute display width for mixed-language text
 fn truncate_text(text: &str, max_width: usize) -> String {
     let current_width = text.width();
 
@@ -538,7 +536,7 @@ fn truncate_text(text: &str, max_width: usize) -> String {
         return text.to_string();
     }
 
-    // 需要截断：逐字符累加宽度，保留 ".." 的空间
+    // Truncation needed: accumulate character widths, leaving room for ".."
     let ellipsis = "..";
     let ellipsis_width = 2;
     let target_width = max_width.saturating_sub(ellipsis_width);
@@ -558,12 +556,12 @@ fn truncate_text(text: &str, max_width: usize) -> String {
     format!("{}{}", result, ellipsis)
 }
 
-/// 根据终端宽度计算策略列表的列宽
+/// Calculate policy list column widths based on terminal width
 ///
-/// 返回: (name_width, protocol_width, status_width)
+/// Returns: (name_width, protocol_width, status_width)
 fn calculate_policy_column_widths(area_width: u16) -> (usize, usize, usize) {
-    // 减去边框、padding、选择标记等固定开销
-    // 边框 2, 选择标记 "✓ " 2, 列间空格 2, padding 4
+    // Subtract fixed overhead for borders, padding, selection marker, etc.
+    // borders 2, selection marker "✓ " 2, column spacing 2, padding 4
     let fixed_overhead = 10;
     let available = (area_width as usize).saturating_sub(fixed_overhead);
 

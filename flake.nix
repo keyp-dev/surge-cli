@@ -11,33 +11,31 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
       in
+      let
+        mkSurgeTui = { lang ? null, description ? "Terminal user interface for macOS Surge proxy management" }:
+          pkgs.rustPlatform.buildRustPackage {
+            pname = "surge-tui";
+            version = "0.1.1";
+            src = ./.;
+            cargoLock.lockFile = ./Cargo.lock;
+            buildFeatures = if lang != null then [ lang ] else [];
+            meta = with pkgs.lib; {
+              inherit description;
+              homepage = "https://github.com/keyp-dev/surge-cli";
+              license = licenses.mit;
+              platforms = platforms.darwin;
+            };
+          };
+      in
       {
-        packages.default = pkgs.rustPlatform.buildRustPackage {
-          pname = "surge-tui";
-          version = "0.1.1";
-          src = ./.;
-          cargoLock.lockFile = ./Cargo.lock;
-          buildFeatures = [ "lang-en-us" ];
-          meta = with pkgs.lib; {
-            description = "Terminal user interface for macOS Surge proxy management";
-            homepage = "https://github.com/keyp-dev/surge-cli";
-            license = licenses.mit;
-            platforms = platforms.darwin;
-          };
-        };
+        # Default: en-us (cargo default)
+        packages.default = mkSurgeTui {};
 
-        packages.zh-cn = pkgs.rustPlatform.buildRustPackage {
-          pname = "surge-tui";
-          version = "0.1.1";
-          src = ./.;
-          cargoLock.lockFile = ./Cargo.lock;
-          buildFeatures = [ "lang-zh-cn" ];
-          meta = with pkgs.lib; {
-            description = "Terminal user interface for macOS Surge proxy management (Chinese)";
-            homepage = "https://github.com/keyp-dev/surge-cli";
-            license = licenses.mit;
-            platforms = platforms.darwin;
-          };
+        # Explicit language builds
+        packages.en-us = mkSurgeTui {};
+        packages.zh-cn = mkSurgeTui {
+          lang = "zh-cn";
+          description = "Terminal user interface for macOS Surge proxy management (中文)";
         };
 
         devShells.default = pkgs.mkShell {

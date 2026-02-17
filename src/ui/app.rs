@@ -1,4 +1,4 @@
-/// UI 应用状态和事件处理
+/// UI application state and event handling
 use crate::application::SurgeClient;
 use crate::domain::entities::{AlertAction, AppSnapshot, ViewMode};
 use crate::domain::models::PolicyDetail;
@@ -16,24 +16,24 @@ use std::collections::HashMap;
 use std::time::Duration;
 use tokio::sync::mpsc;
 
-// 导入 Notification 类型
+// Import Notification type
 use super::components::notifications::{Notification, NotificationLevel};
 
-/// 后台测试任务的消息类型
+/// Message type for background test tasks
 #[derive(Debug)]
 enum TestMessage {
-    /// 测试开始
+    /// Test started
     Started,
-    /// 测试完成
+    /// Test completed
     Completed {
         group_name: String,
         results: Vec<PolicyDetail>,
     },
-    /// 测试失败
+    /// Test failed
     Failed { error: String },
 }
 
-// Notification 辅助函数
+// Notification helper functions
 impl Notification {
     fn new(message: String, level: NotificationLevel) -> Self {
         Self {
@@ -56,58 +56,58 @@ impl Notification {
     }
 }
 
-/// 应用状态
+/// Application state
 pub struct App {
-    /// Surge 客户端
+    /// Surge client
     client: SurgeClient,
-    /// 当前视图
+    /// Current view
     current_view: ViewMode,
-    /// 应用快照
+    /// Application snapshot
     snapshot: AppSnapshot,
-    /// 是否应该退出
+    /// Whether to quit
     should_quit: bool,
-    /// 刷新间隔
+    /// Refresh interval
     refresh_interval: Duration,
-    /// 当前选择的索引（用于列表导航）
+    /// Currently selected index (for list navigation)
     selected_index: usize,
-    /// 策略组内部选中的策略索引（None 表示在策略组列表，Some(idx) 表示在策略组内部）
+    /// Selected policy index within a group (None = in group list; Some(idx) = inside group)
     policy_detail_index: Option<usize>,
-    /// 正在测试的策略组名称（用于显示测试状态）
+    /// Name of the policy group being tested (used to display test status)
     testing_policy_group: Option<String>,
-    /// 后台测试消息接收端
+    /// Background test message receiver
     test_rx: mpsc::Receiver<TestMessage>,
-    /// 后台测试消息发送端
+    /// Background test message sender
     test_tx: mpsc::Sender<TestMessage>,
-    /// 通知列表（最多保留 10 条）
+    /// Notification list (keep at most 50)
     notifications: Vec<Notification>,
-    /// 是否显示通知历史弹窗
+    /// Whether to show the notification history popup
     show_notification_history: bool,
-    /// 是否显示 DevTools 面板
+    /// Whether to show the DevTools panel
     show_devtools: bool,
-    /// DevTools 日志条目
+    /// DevTools log entries
     devtools_logs: Vec<DevToolsLog>,
-    /// 策略延迟测试结果缓存（key: 策略名, value: 测试结果）
-    /// 缓存不会因为 refresh 而丢失，只在新测试时更新
+    /// Policy latency test result cache (key: policy name, value: test result)
+    /// Cache is not cleared on refresh; only updated when a new test runs
     policy_test_cache: HashMap<String, PolicyDetail>,
-    /// 翻译器实例（编译时确定语言）
+    /// Translator instance (language determined at compile time)
     t: &'static dyn crate::i18n::Translate,
-    /// 搜索模式标志
+    /// Search mode flag
     search_mode: bool,
-    /// 搜索关键词（策略组列表）
+    /// Search query (for policy group list)
     search_query: String,
-    /// 策略详情搜索关键词
+    /// Search query for policy detail view
     policy_detail_search: String,
-    /// 分组模式标志（仅用于 Requests 和 ActiveConnections）
+    /// Grouped mode flag (only for Requests and ActiveConnections)
     grouped_mode: bool,
-    /// 分组模式下选中的应用索引
+    /// Selected application index in grouped mode
     grouped_app_index: usize,
-    /// 是否显示帮助弹窗
+    /// Whether to show the help popup
     show_help: bool,
-    /// 待确认终止的连接 ID（Some(id) 时显示确认框）
+    /// Connection ID pending kill confirmation (shows confirm dialog when Some)
     show_kill_confirm: Option<u64>,
 }
 
-/// DevTools 日志条目
+/// DevTools log entry
 #[derive(Debug, Clone)]
 struct DevToolsLog {
     timestamp: DateTime<Local>,
@@ -115,7 +115,7 @@ struct DevToolsLog {
     message: String,
 }
 
-/// 日志级别
+/// Log level
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[allow(dead_code)]
 enum LogLevel {
@@ -154,9 +154,9 @@ impl DevToolsLog {
 }
 
 impl App {
-    /// 创建新应用
+    /// Create a new application
     pub fn new(client: SurgeClient, refresh_interval_secs: u64) -> Self {
-        // 创建后台测试消息通道（缓冲区大小为 1）
+        // Create background test message channel (buffer size 1)
         let (test_tx, test_rx) = mpsc::channel(1);
 
         Self {
@@ -186,65 +186,65 @@ impl App {
         }
     }
 
-    /// 添加通知
+    /// Add a notification
     fn add_notification(&mut self, notification: Notification) {
         self.notifications.push(notification);
-        // 保留最近 50 条历史
+        // Keep at most 50 history entries
         if self.notifications.len() > 50 {
             self.notifications.remove(0);
         }
     }
 
-    /// 添加 DevTools 日志
+    /// Add a DevTools log entry
     fn add_devtools_log(&mut self, level: LogLevel, message: String) {
         self.devtools_logs.push(DevToolsLog::new(level, message));
-        // 保留最近 200 条
+        // Keep at most 200 entries
         if self.devtools_logs.len() > 200 {
             self.devtools_logs.remove(0);
         }
     }
 
-    /// 清理过期通知（仅清理状态栏显示的，历史保留）
+    /// Clean expired notifications (only status bar ones; history is kept)
     fn clean_expired_notifications(&mut self) {
-        // 不再自动清理，保留历史
+        // No longer auto-cleaning; history is preserved
     }
 
-    /// 运行应用
+    /// Run the application
     pub async fn run<B: Backend>(&mut self, terminal: &mut Terminal<B>) -> anyhow::Result<()> {
-        // 初始加载
+        // Initial load
         self.refresh().await;
 
         loop {
-            // 清理过期通知
+            // Clean expired notifications
             self.clean_expired_notifications();
 
-            // 渲染 UI
+            // Render UI
             terminal.draw(|f| self.render(f))?;
 
-            // 处理后台测试消息（非阻塞）
+            // Process background test messages (non-blocking)
             let mut has_test_message = false;
             while let Ok(msg) = self.test_rx.try_recv() {
                 self.handle_test_message(msg);
                 has_test_message = true;
             }
 
-            // 如果处理了测试消息，立即重绘 UI（不等用户交互）
+            // If test messages were processed, redraw immediately (don't wait for user input)
             if has_test_message {
                 terminal.draw(|f| self.render(f))?;
             }
 
-            // 处理事件（非阻塞，使用超时）
-            // 只在超时（无按键）时刷新数据，避免用户操作时列表内容变化
+            // Handle events (non-blocking with timeout)
+            // Only refresh data on timeout (no keypress) to keep list stable during user interaction
             if event::poll(self.refresh_interval)? {
                 if let Event::Key(key) = event::read()? {
                     self.handle_key(key).await;
                 }
             } else {
-                // 超时了才刷新，保持用户操作时列表稳定
+                // Only refresh on timeout to keep list stable while user is interacting
                 self.refresh().await;
             }
 
-            // 检查是否退出
+            // Check if we should quit
             if self.should_quit {
                 break;
             }
@@ -253,16 +253,16 @@ impl App {
         Ok(())
     }
 
-    /// 刷新数据
+    /// Refresh data
     async fn refresh(&mut self) {
         self.snapshot = self.client.get_snapshot().await;
 
-        // 从缓存恢复测试结果（避免刷新后丢失）
+        // Restore test results from cache (prevents loss after refresh)
         if !self.policy_test_cache.is_empty() {
             self.snapshot.policies = self.policy_test_cache.values().cloned().collect();
         }
 
-        // 确保选择索引有效
+        // Ensure selected index is valid
         let max_index = self.get_current_list_len();
         if max_index > 0 && self.selected_index >= max_index {
             self.selected_index = max_index - 1;
@@ -276,7 +276,7 @@ impl App {
         }
     }
 
-    /// 处理后台测试消息
+    /// Handle background test messages
     fn handle_test_message(&mut self, msg: TestMessage) {
         match msg {
             TestMessage::Started => {
@@ -301,7 +301,7 @@ impl App {
                     alive_count
                 );
 
-                // Debug: 先收集所有需要记录的数据（避免借用冲突）
+                // Debug: collect all data to log first (avoid borrow conflicts)
                 let test_result_names: Vec<String> = results
                     .iter()
                     .take(5)
@@ -325,7 +325,7 @@ impl App {
                     .map(|g| g.policies.iter().take(5).map(|p| p.name.clone()).collect())
                     .unwrap_or_default();
 
-                // Debug: 记录测试结果中的策略名称
+                // Debug: log policy names from test results
                 self.add_devtools_log(
                     LogLevel::Info,
                     format!("=== Test results policy names (first 5) ==="),
@@ -334,7 +334,7 @@ impl App {
                     self.add_devtools_log(LogLevel::Info, format!("  [{}] {}", i, name_info));
                 }
 
-                // Debug: 记录策略组中的策略名称（用于对比）
+                // Debug: log policy names in the group (for comparison)
                 if !group_policy_names.is_empty() {
                     self.add_devtools_log(
                         LogLevel::Info,
@@ -345,7 +345,7 @@ impl App {
                     }
                 }
 
-                // 更新测试结果缓存（不会因为 refresh 而丢失）
+                // Update test result cache (persists across refreshes)
                 for policy in &results {
                     self.policy_test_cache
                         .insert(policy.name.clone(), policy.clone());
@@ -360,10 +360,10 @@ impl App {
                     ),
                 );
 
-                // 同时更新 snapshot.policies 以便立即显示
+                // Also update snapshot.policies for immediate display
                 self.snapshot.policies = results.clone();
 
-                // 更新策略组的可用策略列表
+                // Update available policies list for the group
                 let group_policies: Vec<String> = self
                     .snapshot
                     .policy_groups
@@ -378,7 +378,7 @@ impl App {
                     .map(|p| p.name.clone())
                     .collect();
 
-                // Debug: 记录名称匹配结果
+                // Debug: log name matching results
                 self.add_devtools_log(
                     LogLevel::Info,
                     format!(
@@ -397,7 +397,7 @@ impl App {
                     group.available_policies = Some(available.clone());
                 }
 
-                self.testing_policy_group = None; // 清除测试状态
+                self.testing_policy_group = None; // Clear test status
                 self.add_notification(Notification::success(
                     self.t
                         .notification_test_completed(alive_count, results.len()),
@@ -412,13 +412,13 @@ impl App {
         }
     }
 
-    /// 获取当前视图的列表长度（考虑显示限制和搜索过滤）
+    /// Get the length of the current view's list (accounting for display limits and search)
     fn get_current_list_len(&self) -> usize {
         match self.current_view {
             ViewMode::Overview => 0,
             ViewMode::Policies => self.snapshot.policy_groups.len(),
             ViewMode::Dns => {
-                // DNS 视图：返回 DNS 缓存数量（考虑搜索过滤）
+                // DNS view: return filtered DNS cache count
                 if self.search_query.is_empty() {
                     self.snapshot.dns_cache.len()
                 } else {
@@ -432,17 +432,17 @@ impl App {
             }
             ViewMode::Requests | ViewMode::ActiveConnections => {
                 if self.grouped_mode {
-                    // 分组模式：返回当前选中应用的请求数量（考虑搜索过滤）
+                    // Grouped mode: return filtered request count for selected app
                     self.get_grouped_request_count(&self.search_query)
                 } else {
-                    // 普通模式：返回全部请求数量（限制 50 条，考虑搜索过滤）
+                    // Normal mode: return total request count (capped at 50, with search filter)
                     let requests = match self.current_view {
                         ViewMode::Requests => &self.snapshot.recent_requests,
                         ViewMode::ActiveConnections => &self.snapshot.active_connections,
                         _ => return 0,
                     };
 
-                    // 应用搜索过滤
+                    // Apply search filter
                     if self.search_query.is_empty() {
                         requests.len().min(50)
                     } else {
@@ -471,7 +471,7 @@ impl App {
         }
     }
 
-    /// 获取分组模式下的应用数量
+    /// Get the number of applications in grouped mode
     fn get_grouped_app_count(&self) -> usize {
         use std::collections::HashSet;
         let requests = match self.current_view {
@@ -480,7 +480,7 @@ impl App {
             _ => return 0,
         };
 
-        // 统计唯一的应用名称
+        // Count unique application names
         let apps: HashSet<String> = requests
             .iter()
             .filter_map(|r| {
@@ -498,7 +498,7 @@ impl App {
             } // +1 for "Unknown"
     }
 
-    /// 获取分组模式下当前选中应用的请求数量（考虑搜索过滤）
+    /// Get request count for the selected app in grouped mode (with search filter)
     fn get_grouped_request_count(&self, search_query: &str) -> usize {
         use std::collections::HashMap;
 
@@ -508,7 +508,7 @@ impl App {
             _ => return 0,
         };
 
-        // 按 process_path 分组（复用 render_grouped_view 的逻辑）
+        // Group by process_path (mirrors render_grouped_view logic)
         let mut app_groups: HashMap<String, Vec<&crate::domain::models::Request>> = HashMap::new();
         for req in requests {
             let app_name = req
@@ -519,7 +519,7 @@ impl App {
             app_groups.entry(app_name).or_default().push(req);
         }
 
-        // 排序应用列表（和 render_grouped_view 保持一致）
+        // Sort app list (consistent with render_grouped_view)
         let mut apps: Vec<(String, usize)> = app_groups
             .iter()
             .map(|(name, reqs)| (name.clone(), reqs.len()))
@@ -529,7 +529,7 @@ impl App {
             other => other,
         });
 
-        // 获取第 grouped_app_index 个应用的请求
+        // Get requests for the app at grouped_app_index
         if self.grouped_app_index >= apps.len() {
             return 0;
         }
@@ -537,7 +537,7 @@ impl App {
         let (selected_app_name, _) = &apps[self.grouped_app_index];
         let app_requests = app_groups.get(selected_app_name).unwrap();
 
-        // 应用搜索过滤
+        // Apply search filter
         if search_query.is_empty() {
             app_requests.len().min(50)
         } else {
@@ -559,13 +559,13 @@ impl App {
         }
     }
 
-    /// 处理按键事件
+    /// Handle keyboard events
     async fn handle_key(&mut self, key: KeyEvent) {
         // Kill confirmation popup handling
         if let Some(connection_id) = self.show_kill_confirm {
             match key.code {
                 KeyCode::Enter => {
-                    // 执行终止连接
+                    // Execute kill connection
                     if let Err(e) = self.client.kill_connection(connection_id).await {
                         self.add_notification(Notification::error(
                             self.t.notification_kill_failed(&e.to_string()),
@@ -574,19 +574,19 @@ impl App {
                         self.add_notification(Notification::success(
                             self.t.notification_connection_killed().to_string(),
                         ));
-                        // 刷新列表
+                        // Refresh list
                         self.refresh().await;
                     }
                     self.show_kill_confirm = None;
                     return;
                 }
                 KeyCode::Esc => {
-                    // 取消操作
+                    // Cancel
                     self.show_kill_confirm = None;
                     return;
                 }
                 _ => {
-                    // 阻止其他按键
+                    // Block other keys
                     return;
                 }
             }
@@ -688,7 +688,7 @@ impl App {
                 }
             }
 
-            // 退出或返回
+            // Quit or go back
             KeyCode::Char('q') => {
                 self.should_quit = true;
             }
@@ -703,37 +703,37 @@ impl App {
                     self.search_query.clear();
                     self.selected_index = 0;
                 } else if self.show_notification_history {
-                    // 优先关闭弹窗
+                    // Close popup first
                     self.show_notification_history = false;
                 } else if self.show_devtools {
                     self.show_devtools = false;
                 } else if self.current_view == ViewMode::Policies
                     && self.policy_detail_index.is_some()
                 {
-                    // 策略组内部视图：返回策略组列表
+                    // Inside policy group: return to group list
                     self.policy_detail_index = None;
                 } else {
-                    // 其他情况：退出程序
+                    // Otherwise: quit
                     self.should_quit = true;
                 }
             }
 
-            // N 键：打开通知历史
+            // N key: open notification history
             KeyCode::Char('n') | KeyCode::Char('N') => {
                 self.show_notification_history = !self.show_notification_history;
             }
 
-            // ` 键：打开 DevTools
+            // ` key: open DevTools
             KeyCode::Char('`') | KeyCode::Char('~') => {
                 self.show_devtools = !self.show_devtools;
             }
 
-            // ? 键：打开帮助
+            // ? key: open help
             KeyCode::Char('?') => {
                 self.show_help = !self.show_help;
             }
 
-            // 视图切换
+            // View switching
             KeyCode::Char('1') => {
                 self.current_view = ViewMode::Overview;
                 self.selected_index = 0;
@@ -775,11 +775,11 @@ impl App {
             // Kill connection (Connections view only)
             KeyCode::Char('k') | KeyCode::Char('K') => {
                 if self.current_view == ViewMode::ActiveConnections {
-                    // 获取选中的连接
+                    // Get the selected connection
                     let connections = &self.snapshot.active_connections;
                     if !connections.is_empty() {
                         let selected_connection = if self.grouped_mode {
-                            // 分组模式：获取当前应用下选中的连接
+                            // Grouped mode: get the selected connection in the current app
                             use std::collections::HashMap;
                             let mut app_groups: HashMap<
                                 String,
@@ -794,7 +794,7 @@ impl App {
                                 app_groups.entry(app_name).or_default().push(conn);
                             }
 
-                            // 排序应用列表
+                            // Sort app list
                             let mut apps: Vec<(String, usize)> = app_groups
                                 .iter()
                                 .map(|(name, conns)| (name.clone(), conns.len()))
@@ -813,7 +813,7 @@ impl App {
                                     .copied()
                                     .collect();
 
-                                // 应用搜索过滤
+                                // Apply search filter
                                 let filtered: Vec<_> = if self.search_query.is_empty() {
                                     app_connections
                                 } else {
@@ -842,8 +842,8 @@ impl App {
                                 None
                             }
                         } else {
-                            // 普通模式：直接获取选中的连接
-                            // 应用搜索过滤
+                            // Normal mode: directly get the selected connection
+                            // Apply search filter
                             let filtered: Vec<_> = if self.search_query.is_empty() {
                                 connections.iter().collect()
                             } else {
@@ -879,22 +879,22 @@ impl App {
                 }
             }
 
-            // 列表导航
+            // List navigation
             KeyCode::Up => {
                 if self.current_view == ViewMode::Policies {
                     if let Some(policy_idx) = self.policy_detail_index {
-                        // 在策略组内部：导航策略列表
+                        // Inside policy group: navigate policy list
                         if policy_idx > 0 {
                             self.policy_detail_index = Some(policy_idx - 1);
                         }
                     } else {
-                        // 在策略组列表：正常导航
+                        // In group list: normal navigation
                         if self.selected_index > 0 {
                             self.selected_index -= 1;
                         }
                     }
                 } else {
-                    // 其他视图：正常导航（请求列表）
+                    // Other views: normal navigation (request list)
                     if self.selected_index > 0 {
                         self.selected_index -= 1;
                     }
@@ -903,7 +903,7 @@ impl App {
             KeyCode::Down | KeyCode::Char('j') => {
                 if self.current_view == ViewMode::Policies {
                     if let Some(policy_idx) = self.policy_detail_index {
-                        // 在策略组内部：导航策略列表
+                        // Inside policy group: navigate policy list
                         if self.selected_index < self.snapshot.policy_groups.len() {
                             let group = &self.snapshot.policy_groups[self.selected_index];
                             if policy_idx < group.policies.len() - 1 {
@@ -911,14 +911,14 @@ impl App {
                             }
                         }
                     } else {
-                        // 在策略组列表：正常导航
+                        // In group list: normal navigation
                         let max_index = self.get_current_list_len();
                         if max_index > 0 && self.selected_index < max_index - 1 {
                             self.selected_index += 1;
                         }
                     }
                 } else {
-                    // 其他视图：正常导航（请求列表）
+                    // Other views: normal navigation (request list)
                     let max_index = self.get_current_list_len();
                     if max_index > 0 && self.selected_index < max_index - 1 {
                         self.selected_index += 1;
@@ -926,7 +926,7 @@ impl App {
                 }
             }
 
-            // 左右键导航应用列表（仅在分组模式下）
+            // Left/right keys navigate app list (grouped mode only)
             KeyCode::Left | KeyCode::Char('h') => {
                 if self.grouped_mode
                     && matches!(
@@ -936,7 +936,7 @@ impl App {
                 {
                     if self.grouped_app_index > 0 {
                         self.grouped_app_index -= 1;
-                        self.selected_index = 0; // 切换应用时重置请求索引
+                        self.selected_index = 0; // Reset request index when switching apps
                     }
                 }
             }
@@ -950,37 +950,37 @@ impl App {
                     let max_app_index = self.get_grouped_app_count();
                     if max_app_index > 0 && self.grouped_app_index < max_app_index - 1 {
                         self.grouped_app_index += 1;
-                        self.selected_index = 0; // 切换应用时重置请求索引
+                        self.selected_index = 0; // Reset request index when switching apps
                     }
                 }
             }
 
-            // Enter 键：进入策略组或切换策略
+            // Enter key: enter policy group or switch policy
             KeyCode::Enter => {
                 if self.current_view == ViewMode::Policies {
                     if let Some(policy_idx) = self.policy_detail_index {
-                        // 在策略组内部：切换到选中的策略
+                        // Inside policy group: switch to selected policy
                         if self.selected_index < self.snapshot.policy_groups.len() {
                             let group = &self.snapshot.policy_groups[self.selected_index];
                             if policy_idx < group.policies.len() {
                                 let selected_policy = &group.policies[policy_idx];
-                                // 调用 API 切换策略
+                                // Call API to switch policy
                                 let _ = self
                                     .client
                                     .select_policy_group(&group.name, &selected_policy.name)
                                     .await;
-                                // 退出策略组内部视图
+                                // Exit policy group detail view
                                 self.policy_detail_index = None;
-                                // 刷新数据
+                                // Refresh data
                                 self.refresh().await;
                             }
                         }
                     } else {
-                        // 在策略组列表：进入策略组内部
+                        // In group list: enter the policy group
                         if self.selected_index < self.snapshot.policy_groups.len() {
                             let group = &self.snapshot.policy_groups[self.selected_index];
                             if !group.policies.is_empty() {
-                                // 找到当前选中的策略索引作为初始选择
+                                // Find the currently selected policy index as the initial selection
                                 let initial_idx = if let Some(current_selected) = &group.selected {
                                     group
                                         .policies
@@ -997,7 +997,7 @@ impl App {
                 }
             }
 
-            // T 键：测试所有策略延迟（异步后台执行，不阻塞 UI）
+            // T key: test all policy latencies (async background task, non-blocking)
             KeyCode::Char('t') | KeyCode::Char('T') => {
                 if self.current_view == ViewMode::Policies {
                     if self.selected_index < self.snapshot.policy_groups.len() {
@@ -1007,9 +1007,9 @@ impl App {
                         let client = self.client.clone();
                         let tx = self.test_tx.clone();
 
-                        // 启动后台测试任务
+                        // Start background test task
                         tokio::spawn(async move {
-                            // 发送测试开始消息
+                            // Send test started message
                             let _ = tx.send(TestMessage::Started).await;
 
                             tracing::info!(
@@ -1017,10 +1017,10 @@ impl App {
                                 group_name
                             );
 
-                            // 执行测试（在后台，不阻塞 UI）
+                            // Execute test in background (non-blocking)
                             match client.test_all_policies_with_latency().await {
                                 Ok(policy_details) => {
-                                    // 发送测试完成消息
+                                    // Send test completed message
                                     let _ = tx
                                         .send(TestMessage::Completed {
                                             group_name,
@@ -1029,7 +1029,7 @@ impl App {
                                         .await;
                                 }
                                 Err(e) => {
-                                    // 发送测试失败消息
+                                    // Send test failed message
                                     let _ = tx
                                         .send(TestMessage::Failed {
                                             error: e.to_string(),
@@ -1044,7 +1044,7 @@ impl App {
                 }
             }
 
-            // F 键：清空 DNS 缓存（仅 DNS 视图）
+            // F key: flush DNS cache (DNS view only)
             KeyCode::Char('f') | KeyCode::Char('F') => {
                 if self.current_view == ViewMode::Dns && self.snapshot.http_api_available {
                     match self.client.flush_dns().await {
@@ -1063,11 +1063,11 @@ impl App {
                 }
             }
 
-            // 切换出站模式
+            // Toggle outbound mode
             KeyCode::Char('m') | KeyCode::Char('M') => {
                 use crate::domain::models::OutboundMode;
                 if let Some(ref current_mode) = self.snapshot.outbound_mode {
-                    // 循环切换：Direct → Proxy → Rule → Direct
+                    // Cycle: Direct → Proxy → Rule → Direct
                     let next_mode = match current_mode {
                         OutboundMode::Direct => OutboundMode::Proxy,
                         OutboundMode::Proxy => OutboundMode::Rule,
@@ -1079,27 +1079,27 @@ impl App {
                         .await
                         .is_ok()
                     {
-                        // 刷新以获取真实状态
+                        // Refresh to get real state
                         self.refresh().await;
                     }
                 }
             }
 
-            // 切换 MITM 状态（仅 Overview 视图）
+            // Toggle MITM status (Overview view only)
             KeyCode::Char('i') | KeyCode::Char('I') => {
                 if self.current_view == ViewMode::Overview && self.snapshot.http_api_available {
                     if let Some(current_status) = self.snapshot.mitm_enabled {
                         let new_status = !current_status;
                         match self.client.set_mitm_status(new_status).await {
                             Ok(_) => {
-                                // 显示通知
+                                // Show notification
                                 let msg = if new_status {
                                     self.t.notification_mitm_enabled()
                                 } else {
                                     self.t.notification_mitm_disabled()
                                 };
                                 self.add_notification(Notification::success(msg.to_string()));
-                                // 刷新以获取真实状态
+                                // Refresh to get real state
                                 self.refresh().await;
                             }
                             Err(e) => {
@@ -1112,21 +1112,21 @@ impl App {
                 }
             }
 
-            // 切换 Capture 状态（仅 Overview 视图）
+            // Toggle Capture status (Overview view only)
             KeyCode::Char('c') | KeyCode::Char('C') => {
                 if self.current_view == ViewMode::Overview && self.snapshot.http_api_available {
                     if let Some(current_status) = self.snapshot.capture_enabled {
                         let new_status = !current_status;
                         match self.client.set_capture_status(new_status).await {
                             Ok(_) => {
-                                // 显示通知
+                                // Show notification
                                 let msg = if new_status {
                                     self.t.notification_capture_enabled()
                                 } else {
                                     self.t.notification_capture_disabled()
                                 };
                                 self.add_notification(Notification::success(msg.to_string()));
-                                // 刷新以获取真实状态
+                                // Refresh to get real state
                                 self.refresh().await;
                             }
                             Err(e) => {
@@ -1139,9 +1139,9 @@ impl App {
                 }
             }
 
-            // Alert 操作
+            // Alert actions
             KeyCode::Char('s') | KeyCode::Char('S') => {
-                // 启动 Surge
+                // Start Surge
                 if let Some(alert) = self.snapshot.alerts.first() {
                     if matches!(alert.action, AlertAction::StartSurge) {
                         let _ = self.client.start_surge().await;
@@ -1151,7 +1151,7 @@ impl App {
             }
 
             KeyCode::Char('r') | KeyCode::Char('R') => {
-                // 优先处理 Alert 的 ReloadConfig 操作
+                // Handle Alert ReloadConfig action first
                 if let Some(alert) = self.snapshot.alerts.first() {
                     if matches!(alert.action, AlertAction::ReloadConfig) {
                         let _ = self.client.reload_config().await;
@@ -1159,7 +1159,7 @@ impl App {
                         return;
                     }
                 }
-                // 否则作为手动刷新
+                // Otherwise treat as manual refresh
                 self.refresh().await;
             }
 
@@ -1167,7 +1167,7 @@ impl App {
         }
     }
 
-    /// 渲染 UI
+    /// Render UI
     fn render(&self, f: &mut Frame) {
         let chunks = Layout::default()
             .direction(Direction::Vertical)
@@ -1188,7 +1188,7 @@ impl App {
         self.render_status_bar(f, chunks[2]);
     }
 
-    /// 渲染 Tabs
+    /// Render tabs
     fn render_tabs(&self, f: &mut Frame, area: Rect) {
         let titles: Vec<Line> = ViewMode::all()
             .iter()
@@ -1201,7 +1201,7 @@ impl App {
                     ViewMode::Dns => ("5", self.t.view_dns()),
                 };
 
-                // btop 风格：[数字] 标题
+                // btop style: [number] title
                 Line::from(vec![
                     Span::raw(" ["),
                     Span::styled(
@@ -1238,35 +1238,35 @@ impl App {
         f.render_widget(tabs, area);
     }
 
-    /// 渲染内容
+    /// Render content area
     fn render_content(&self, f: &mut Frame, area: Rect) {
-        // 如果有 Alerts，分割区域
+        // If there are alerts, split the area
         if !self.snapshot.alerts.is_empty() {
             let chunks = Layout::default()
                 .direction(Direction::Vertical)
                 .constraints([
                     Constraint::Length(4), // Alerts
-                    Constraint::Min(0),    // 实际内容
+                    Constraint::Min(0),    // Main content
                 ])
                 .split(area);
 
-            // 渲染 Alerts
+            // Render alerts
             super::components::alerts::render(f, chunks[0], &self.snapshot.alerts, self.t);
 
-            // 渲染实际内容
+            // Render main content
             self.render_view_content(f, chunks[1]);
         } else {
-            // 没有 Alerts，直接渲染内容
+            // No alerts: render content directly
             self.render_view_content(f, area);
         }
     }
 
-    /// 渲染视图内容
+    /// Render view content
     fn render_view_content(&self, f: &mut Frame, area: Rect) {
-        // 直接渲染主内容
+        // Render main content
         self.render_main_view(f, area);
 
-        // 渲染弹窗（覆盖在主内容之上）
+        // Render popups (overlay on top of main content)
         if self.show_notification_history {
             self.render_notification_history(f, area);
         }
@@ -1281,7 +1281,7 @@ impl App {
         }
     }
 
-    /// 渲染主视图内容
+    /// Render main view content
     fn render_main_view(&self, f: &mut Frame, area: Rect) {
         match self.current_view {
             ViewMode::Overview => {
@@ -1343,7 +1343,7 @@ impl App {
         }
     }
 
-    /// 渲染状态栏
+    /// Render status bar
     fn render_status_bar(&self, f: &mut Frame, area: Rect) {
         let status_text = if self.snapshot.surge_running {
             if self.snapshot.http_api_available {
@@ -1363,7 +1363,7 @@ impl App {
             self.t.ui_status_stopped().to_string()
         };
 
-        // 构建快捷键提示（简化版）
+        // Build shortcut hints (simplified)
         let mut spans = vec![
             Span::styled(
                 format!(" {} ", status_text),
@@ -1376,12 +1376,12 @@ impl App {
             Span::raw("  "),
         ];
 
-        // 只显示最基本的快捷键提示
+        // Show only the most basic shortcut hints
         spans.push(Span::raw(self.t.key_quit()));
         spans.push(Span::raw("  "));
         spans.push(Span::raw(self.t.key_help()));
 
-        // Alert 操作快捷键（优先级高）
+        // Alert action shortcuts (high priority)
         if let Some(alert) = self.snapshot.alerts.first() {
             match alert.action {
                 AlertAction::StartSurge => {
@@ -1406,12 +1406,12 @@ impl App {
             }
         }
 
-        // 状态栏左侧
+        // Status bar left side
         let left_line = Line::from(spans);
 
-        // 状态栏右侧：显示最新通知（简洁模式）
+        // Status bar right side: show latest notification (compact mode)
         let right_spans = if let Some(latest) = self.notifications.last() {
-            // 只显示最新一条，显示时间（HH:MM:SS）
+            // Show only the latest notification with time (HH:MM:SS)
             let now = Local::now();
             let elapsed = (now - latest.created_at).num_seconds().max(0);
             let time_str = latest.created_at.format("%H:%M:%S").to_string();
@@ -1432,7 +1432,7 @@ impl App {
                 Span::raw(" "),
                 Span::styled(display_msg, Style::default().fg(latest.color())),
                 if elapsed < 60 {
-                    // 60秒内显示时间
+                    // Show time within 60 seconds
                     Span::styled(
                         format!(" ({})", time_str),
                         Style::default().fg(Color::DarkGray),
@@ -1447,12 +1447,12 @@ impl App {
 
         let right_line = Line::from(right_spans);
 
-        // 分割状态栏：左侧快捷键 | 右侧通知
+        // Split status bar: left shortcuts | right notification
         let status_chunks = Layout::default()
             .direction(Direction::Horizontal)
             .constraints([
-                Constraint::Min(0),     // 左侧快捷键
-                Constraint::Length(50), // 右侧通知区域
+                Constraint::Min(0),     // Left: shortcuts
+                Constraint::Length(50), // Right: notification area
             ])
             .split(area);
 
@@ -1463,19 +1463,19 @@ impl App {
         );
     }
 
-    /// 渲染通知历史弹窗
+    /// Render notification history popup
     fn render_notification_history(&self, f: &mut Frame, area: Rect) {
-        // 居中弹窗 80% 宽度，70% 高度
+        // Centered popup: 80% width, 70% height
         let popup_area = self.centered_rect(80, 70, area);
 
-        // 构建通知列表
+        // Build notification list
         let mut lines = Vec::new();
         for (i, notification) in self.notifications.iter().rev().enumerate() {
             if i > 0 {
                 lines.push(Line::from(""));
             }
 
-            // 格式化为绝对时间：YYYY-MM-DD HH:MM:SS
+            // Format as absolute time: YYYY-MM-DD HH:MM:SS
             let time_str = notification
                 .created_at
                 .format("%Y-%m-%d %H:%M:%S")
@@ -1522,9 +1522,9 @@ impl App {
         f.render_widget(paragraph, popup_area);
     }
 
-    /// 渲染 DevTools 面板
+    /// Render DevTools panel
     fn render_devtools(&self, f: &mut Frame, area: Rect) {
-        // 底部 70% 高度
+        // Bottom 70% height
         let devtools_area = Rect {
             x: area.x,
             y: area.y + (area.height * 30 / 100),
@@ -1532,10 +1532,10 @@ impl App {
             height: area.height * 70 / 100,
         };
 
-        // 构建日志列表
+        // Build log list
         let mut lines = Vec::new();
         for log in self.devtools_logs.iter().rev().take(100) {
-            // 格式化为绝对时间：YYYY-MM-DD HH:MM:SS
+            // Format as absolute time: YYYY-MM-DD HH:MM:SS
             let time_str = log.timestamp.format("%Y-%m-%d %H:%M:%S").to_string();
 
             let line = Line::from(vec![
@@ -1576,34 +1576,34 @@ impl App {
         f.render_widget(paragraph, devtools_area);
     }
 
-    /// 渲染帮助弹窗
+    /// Render help popup
     fn render_help(&self, f: &mut Frame, area: Rect) {
-        // 居中弹窗 70% 宽度，60% 高度
+        // Centered popup: 70% width, 60% height
         let popup_area = self.centered_rect(70, 60, area);
 
-        // 构建帮助内容
+        // Build help content
         let mut lines = Vec::new();
 
-        // 全局快捷键部分
+        // Global shortcuts section
         lines.push(Line::from(vec![Span::styled(
-            format!("【{}】", self.t.help_global_section()),
+            format!("[{}]", self.t.help_global_section()),
             Style::default()
                 .fg(Color::Yellow)
                 .add_modifier(Modifier::BOLD),
         )]));
         lines.push(Line::from(""));
-        lines.push(Line::from("  q          - 退出程序"));
-        lines.push(Line::from("  r          - 刷新数据"));
-        lines.push(Line::from("  1-4        - 切换视图"));
-        lines.push(Line::from("  m          - 切换出站模式"));
-        lines.push(Line::from("  n          - 通知历史"));
-        lines.push(Line::from("  `          - 开发工具"));
-        lines.push(Line::from("  ?          - 此帮助"));
+        lines.push(Line::from(self.t.help_shortcut_quit()));
+        lines.push(Line::from(self.t.help_shortcut_refresh()));
+        lines.push(Line::from(self.t.help_shortcut_switch_view()));
+        lines.push(Line::from(self.t.help_shortcut_toggle_outbound()));
+        lines.push(Line::from(self.t.help_shortcut_notification_history()));
+        lines.push(Line::from(self.t.help_shortcut_devtools()));
+        lines.push(Line::from(self.t.help_shortcut_help()));
         lines.push(Line::from(""));
 
-        // 当前视图快捷键
+        // Current view shortcuts
         lines.push(Line::from(vec![Span::styled(
-            format!("【{}】", self.t.help_view_section()),
+            format!("[{}]", self.t.help_view_section()),
             Style::default()
                 .fg(Color::Yellow)
                 .add_modifier(Modifier::BOLD),
@@ -1612,51 +1612,51 @@ impl App {
 
         match self.current_view {
             ViewMode::Overview => {
-                lines.push(Line::from("  m          - 切换出站模式"));
+                lines.push(Line::from(self.t.help_shortcut_toggle_outbound()));
                 if self.snapshot.http_api_available {
-                    lines.push(Line::from("  i          - 切换 MITM"));
-                    lines.push(Line::from("  c          - 切换流量捕获"));
+                    lines.push(Line::from(self.t.help_shortcut_toggle_mitm()));
+                    lines.push(Line::from(self.t.help_shortcut_toggle_capture()));
                 }
             }
             ViewMode::Policies => {
-                lines.push(Line::from("  /          - 搜索"));
-                lines.push(Line::from("  t          - 测试延迟"));
-                lines.push(Line::from("  Enter      - 进入/选择策略"));
-                lines.push(Line::from("  ESC        - 返回"));
+                lines.push(Line::from(self.t.help_shortcut_search()));
+                lines.push(Line::from(self.t.help_shortcut_test_latency()));
+                lines.push(Line::from(self.t.help_shortcut_enter_select_policy()));
+                lines.push(Line::from(self.t.help_shortcut_esc_back()));
             }
             ViewMode::Requests | ViewMode::ActiveConnections => {
-                lines.push(Line::from("  /          - 搜索"));
-                lines.push(Line::from("  g          - 切换分组模式"));
+                lines.push(Line::from(self.t.help_shortcut_search()));
+                lines.push(Line::from(self.t.help_shortcut_toggle_group()));
                 if self.grouped_mode {
-                    lines.push(Line::from("  h/l        - 切换应用"));
+                    lines.push(Line::from(self.t.help_shortcut_switch_app()));
                 }
             }
             ViewMode::Dns => {
-                lines.push(Line::from("  /          - 搜索"));
+                lines.push(Line::from(self.t.help_shortcut_search()));
                 if self.snapshot.http_api_available {
-                    lines.push(Line::from("  f          - 清空 DNS 缓存"));
+                    lines.push(Line::from(self.t.help_shortcut_flush_dns()));
                 }
             }
         }
 
         lines.push(Line::from(""));
 
-        // 导航快捷键
+        // Navigation shortcuts
         lines.push(Line::from(vec![Span::styled(
-            format!("【{}】", self.t.help_navigation_section()),
+            format!("[{}]", self.t.help_navigation_section()),
             Style::default()
                 .fg(Color::Yellow)
                 .add_modifier(Modifier::BOLD),
         )]));
         lines.push(Line::from(""));
-        lines.push(Line::from("  j/k 或 ↓/↑  - 上下移动"));
+        lines.push(Line::from(self.t.help_nav_up_down()));
         if self.grouped_mode
             && matches!(
                 self.current_view,
                 ViewMode::Requests | ViewMode::ActiveConnections
             )
         {
-            lines.push(Line::from("  h/l 或 ←/→  - 左右切换应用"));
+            lines.push(Line::from(self.t.help_nav_left_right()));
         }
 
         let paragraph = Paragraph::new(lines)
@@ -1672,10 +1672,10 @@ impl App {
         f.render_widget(paragraph, popup_area);
     }
 
-    /// 渲染终止连接确认对话框
+    /// Render kill connection confirmation dialog
     fn render_kill_confirm(&self, f: &mut Frame, area: Rect) {
         if let Some(connection_id) = self.show_kill_confirm {
-            // 查找待终止的连接
+            // Find the connection to be killed
             let connection = self
                 .snapshot
                 .active_connections
@@ -1683,12 +1683,12 @@ impl App {
                 .find(|c| c.id == connection_id);
 
             if let Some(conn) = connection {
-                // 小弹窗：50% 宽度，30% 高度
+                // Small popup: 50% width, 30% height
                 let popup_area = self.centered_rect(50, 30, area);
 
                 let mut lines = Vec::new();
 
-                // 标题行
+                // Title line
                 lines.push(Line::from(vec![Span::styled(
                     self.t
                         .confirm_kill_message(conn.url.as_deref().unwrap_or("Unknown")),
@@ -1698,17 +1698,17 @@ impl App {
                 )]));
                 lines.push(Line::from(""));
 
-                // 连接详情
+                // Connection details
                 if let Some(ref url) = conn.url {
                     lines.push(Line::from(vec![
-                        Span::styled("目标: ", Style::default().add_modifier(Modifier::BOLD)),
+                        Span::styled(self.t.confirm_kill_label_target(), Style::default().add_modifier(Modifier::BOLD)),
                         Span::raw(url),
                     ]));
                 }
 
                 if let Some(ref process) = conn.process_path {
                     lines.push(Line::from(vec![
-                        Span::styled("进程: ", Style::default().add_modifier(Modifier::BOLD)),
+                        Span::styled(self.t.confirm_kill_label_process(), Style::default().add_modifier(Modifier::BOLD)),
                         Span::raw(process),
                     ]));
                 }
@@ -1716,7 +1716,7 @@ impl App {
                 let upload_kb = conn.out_bytes / 1024;
                 let download_kb = conn.in_bytes / 1024;
                 lines.push(Line::from(vec![
-                    Span::styled("流量: ", Style::default().add_modifier(Modifier::BOLD)),
+                    Span::styled(self.t.confirm_kill_label_traffic(), Style::default().add_modifier(Modifier::BOLD)),
                     Span::styled(
                         format!("↑{}KB ↓{}KB", upload_kb, download_kb),
                         Style::default().fg(Color::Green),
@@ -1744,7 +1744,7 @@ impl App {
         }
     }
 
-    /// 计算居中矩形区域
+    /// Calculate a centered rectangular area
     fn centered_rect(&self, percent_x: u16, percent_y: u16, r: Rect) -> Rect {
         let popup_layout = Layout::default()
             .direction(Direction::Vertical)

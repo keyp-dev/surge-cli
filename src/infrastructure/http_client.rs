@@ -135,26 +135,26 @@ impl SurgeHttpClient {
         self.post_empty("/v1/outbound", Some(body)).await
     }
 
-    // ===== 策略相关 =====
+    // ===== Policy-related =====
 
-    /// 获取所有策略列表
+    /// Get all policies
     pub async fn get_policies(&self) -> Result<Vec<String>> {
         let response: PoliciesResponse = self.get("/v1/policies").await?;
-        // 合并 proxies 和 policy-groups
+        // Merge proxies and policy-groups
         let mut all_policies = response.proxies;
         all_policies.extend(response.policy_groups);
         Ok(all_policies)
     }
 
-    /// 获取策略详情
+    /// Get policy detail
     pub async fn get_policy_detail(&self, name: &str) -> Result<PolicyDetail> {
-        // URL 编码策略名称
+        // URL-encode the policy name
         let encoded_name = urlencoding::encode(name);
         let path = format!("/v1/policies/detail?policy_name={}", encoded_name);
         self.get(&path).await
     }
 
-    /// 测试策略延迟
+    /// Test policy latency
     pub async fn test_policy(&self, name: &str) -> Result<()> {
         let body = serde_json::json!({
             "policy_names": [name],
@@ -163,17 +163,17 @@ impl SurgeHttpClient {
         self.post_empty("/v1/policies/test", Some(body)).await
     }
 
-    // ===== 策略组相关 =====
+    // ===== Policy group-related =====
 
-    /// 获取所有策略组
+    /// Get all policy groups
     pub async fn get_policy_groups(&self) -> Result<Vec<PolicyGroup>> {
         let response: PolicyGroupsResponse = self.get("/v1/policy_groups").await?;
 
-        // 收集并排序策略组名称，保持稳定顺序
+        // Collect and sort group names to maintain stable order
         let mut group_names: Vec<String> = response.keys().cloned().collect();
         group_names.sort();
 
-        // 为每个策略组获取当前选中的策略
+        // Fetch the currently selected policy for each group
         let mut selected_map = std::collections::HashMap::new();
         for group_name in &group_names {
             if let Ok(Some(policy)) = self.get_policy_group_selected(group_name).await {
@@ -181,7 +181,7 @@ impl SurgeHttpClient {
             }
         }
 
-        // 按排序后的顺序构建 Vec<PolicyGroup>
+        // Build Vec<PolicyGroup> in sorted order
         let groups = group_names
             .into_iter()
             .filter_map(|name| {
@@ -192,7 +192,7 @@ impl SurgeHttpClient {
                         name,
                         policies: policies.clone(),
                         selected,
-                        available_policies: None, // 初始为 None，需要测试后才有数据
+                        available_policies: None, // Initially None; populated after testing
                     }
                 })
             })
@@ -201,7 +201,7 @@ impl SurgeHttpClient {
         Ok(groups)
     }
 
-    /// 获取策略组的当前选中策略
+    /// Get the currently selected policy in a policy group
     pub async fn get_policy_group_selected(&self, group_name: &str) -> Result<Option<String>> {
         use crate::domain::models::PolicyGroupSelectResponse;
 
@@ -213,13 +213,13 @@ impl SurgeHttpClient {
         match self.get::<PolicyGroupSelectResponse>(&url).await {
             Ok(response) => Ok(Some(response.policy)),
             Err(_) => {
-                // 如果获取失败（可能是非 select 类型的策略组），返回 None
+                // Return None if fetch fails (e.g. non-select type group)
                 Ok(None)
             }
         }
     }
 
-    /// 选择策略组中的策略
+    /// Select a policy within a policy group
     pub async fn select_policy_group(&self, group_name: &str, policy: &str) -> Result<()> {
         let body = serde_json::json!({
             "group_name": group_name,
@@ -229,13 +229,13 @@ impl SurgeHttpClient {
             .await
     }
 
-    /// 测试策略组，返回可用策略列表
+    /// Test a policy group and return the list of available policies
     pub async fn test_policy_group(&self, group_name: &str) -> Result<Vec<String>> {
         let body = serde_json::json!({ "group_name": group_name });
         let response: serde_json::Value = self.post("/v1/policy_groups/test", Some(body)).await?;
         tracing::debug!("Policy group {} test response: {:?}", group_name, response);
 
-        // 解析 {"available": ["proxy1", "proxy2"]} 格式
+        // Parse {"available": ["proxy1", "proxy2"]} format
         let available = response
             .get("available")
             .and_then(|v| v.as_array())
@@ -254,55 +254,55 @@ impl SurgeHttpClient {
         Ok(available)
     }
 
-    /// 获取策略组测试结果
+    /// Get policy group test results
     pub async fn get_policy_group_test_results(&self) -> Result<serde_json::Value> {
         self.get("/v1/policy_groups/test_results").await
     }
 
-    // ===== 请求相关 =====
+    // ===== Request-related =====
 
-    /// 获取最近请求
+    /// Get recent requests
     pub async fn get_recent_requests(&self) -> Result<Vec<Request>> {
         let response: RequestsResponse = self.get("/v1/requests/recent").await?;
         Ok(response.requests)
     }
 
-    /// 获取活跃连接
+    /// Get active connections
     pub async fn get_active_connections(&self) -> Result<Vec<Request>> {
         let response: ActiveConnectionsResponse = self.get("/v1/requests/active").await?;
         Ok(response.requests)
     }
 
-    /// 终止连接
+    /// Kill a connection
     pub async fn kill_connection(&self, id: u64) -> Result<()> {
         let body = serde_json::json!({ "id": id });
         self.post_empty("/v1/requests/kill", Some(body)).await
     }
 
-    // ===== 配置相关 =====
+    // ===== Configuration-related =====
 
-    /// 重新加载配置
+    /// Reload configuration
     pub async fn reload_config(&self) -> Result<()> {
         self.post_empty("/v1/profiles/reload", None).await
     }
 
-    /// 获取当前配置
+    /// Get current profile
     pub async fn get_current_profile(&self, show_sensitive: bool) -> Result<ProfileInfo> {
         let sensitive = if show_sensitive { "1" } else { "0" };
         let path = format!("/v1/profiles/current?sensitive={}", sensitive);
         self.get(&path).await
     }
 
-    // ===== DNS 相关 =====
+    // ===== DNS-related =====
 
-    /// 清空 DNS 缓存
+    /// Flush DNS cache
     pub async fn flush_dns(&self) -> Result<()> {
         self.post_empty("/v1/dns/flush", None).await
     }
 
-    /// 获取 DNS 缓存
+    /// Get DNS cache
     pub async fn get_dns_cache(&self) -> Result<Vec<DnsRecord>> {
-        // 先获取原始响应文本以便调试
+        // Fetch raw response text for debugging
         let response = self
             .client
             .get(&self.build_url("/v1/dns"))
@@ -328,7 +328,7 @@ impl SurgeHttpClient {
 
         tracing::debug!("DNS API raw response: {}", text);
 
-        // 尝试解析为 DnsResponse
+        // Attempt to parse as DnsResponse
         serde_json::from_str::<DnsResponse>(&text)
             .map(|r| r.records)
             .map_err(|e| {
@@ -344,38 +344,38 @@ impl SurgeHttpClient {
             })
     }
 
-    // ===== 功能开关 =====
+    // ===== Feature toggles =====
 
-    /// 获取功能状态
+    /// Get feature status
     async fn get_feature_status(&self, feature: &str) -> Result<bool> {
         let path = format!("/v1/features/{}", feature);
         let response: FeatureStatus = self.get(&path).await?;
         Ok(response.enabled)
     }
 
-    /// 设置功能状态
+    /// Set feature status
     async fn set_feature_status(&self, feature: &str, enabled: bool) -> Result<()> {
         let path = format!("/v1/features/{}", feature);
         let body = serde_json::json!({ "enabled": enabled });
         self.post_empty(&path, Some(body)).await
     }
 
-    /// 获取 MITM 状态
+    /// Get MITM status
     pub async fn get_mitm_status(&self) -> Result<bool> {
         self.get_feature_status("mitm").await
     }
 
-    /// 设置 MITM 状态
+    /// Set MITM status
     pub async fn set_mitm_status(&self, enabled: bool) -> Result<()> {
         self.set_feature_status("mitm", enabled).await
     }
 
-    /// 获取流量捕获状态
+    /// Get traffic capture status
     pub async fn get_capture_status(&self) -> Result<bool> {
         self.get_feature_status("capture").await
     }
 
-    /// 设置流量捕获状态
+    /// Set traffic capture status
     pub async fn set_capture_status(&self, enabled: bool) -> Result<()> {
         self.set_feature_status("capture", enabled).await
     }

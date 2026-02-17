@@ -359,6 +359,81 @@ impl Translate for ZhCN {
         "导航"
     }
 
+    // ---- 全局快捷键行 ----
+    fn help_shortcut_quit(&self) -> &'static str {
+        "  q          - 退出程序"
+    }
+
+    fn help_shortcut_refresh(&self) -> &'static str {
+        "  r          - 刷新数据"
+    }
+
+    fn help_shortcut_switch_view(&self) -> &'static str {
+        "  1-5        - 切换视图"
+    }
+
+    fn help_shortcut_toggle_outbound(&self) -> &'static str {
+        "  m          - 切换出站模式"
+    }
+
+    fn help_shortcut_notification_history(&self) -> &'static str {
+        "  n          - 通知历史"
+    }
+
+    fn help_shortcut_devtools(&self) -> &'static str {
+        "  `          - 开发工具"
+    }
+
+    fn help_shortcut_help(&self) -> &'static str {
+        "  ?          - 此帮助"
+    }
+
+    // ---- 视图专属快捷键行 ----
+    fn help_shortcut_toggle_mitm(&self) -> &'static str {
+        "  i          - 切换 MITM"
+    }
+
+    fn help_shortcut_toggle_capture(&self) -> &'static str {
+        "  c          - 切换流量捕获"
+    }
+
+    fn help_shortcut_search(&self) -> &'static str {
+        "  /          - 搜索"
+    }
+
+    fn help_shortcut_test_latency(&self) -> &'static str {
+        "  t          - 测试延迟"
+    }
+
+    fn help_shortcut_enter_select_policy(&self) -> &'static str {
+        "  Enter      - 进入/选择策略"
+    }
+
+    fn help_shortcut_esc_back(&self) -> &'static str {
+        "  ESC        - 返回"
+    }
+
+    fn help_shortcut_toggle_group(&self) -> &'static str {
+        "  g          - 切换分组模式"
+    }
+
+    fn help_shortcut_switch_app(&self) -> &'static str {
+        "  h/l        - 切换应用"
+    }
+
+    fn help_shortcut_flush_dns(&self) -> &'static str {
+        "  f          - 清空 DNS 缓存"
+    }
+
+    // ---- 导航行 ----
+    fn help_nav_up_down(&self) -> &'static str {
+        "  j/k 或 ↓/↑  - 上下移动"
+    }
+
+    fn help_nav_left_right(&self) -> &'static str {
+        "  h/l 或 ←/→  - 左右切换应用"
+    }
+
     // ========== 通用操作词 ==========
     fn action_select(&self) -> &'static str {
         "选择"
@@ -411,6 +486,18 @@ impl Translate for ZhCN {
 
     fn confirm_kill_hint(&self) -> &'static str {
         "[Enter] 确认  [ESC] 取消"
+    }
+
+    fn confirm_kill_label_target(&self) -> &'static str {
+        "目标: "
+    }
+
+    fn confirm_kill_label_process(&self) -> &'static str {
+        "进程: "
+    }
+
+    fn confirm_kill_label_traffic(&self) -> &'static str {
+        "流量: "
     }
 
     fn notification_connection_killed(&self) -> &'static str {

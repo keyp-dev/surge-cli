@@ -4,18 +4,18 @@ version = "0.1.1"
 edition = "2021"
 
 [features]
-default = ["lang-en-us"]
-lang-zh-cn = []
-lang-en-us = []
+# Default language: en-us (no flag needed)
+# Chinese build:    cargo build --features zh-cn
+zh-cn = []
 
 [dependencies]
-# 异步运行时
+# Async runtime
 tokio = { version = "1.45", features = ["full"] }
 
-# HTTP 客户端
+# HTTP client
 reqwest = { version = "0.12", features = ["json"] }
 
-# 序列化
+# Serialization
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 
@@ -23,22 +23,22 @@ serde_json = "1.0"
 ratatui = "0.29"
 crossterm = "0.28"
 
-# 错误处理
+# Error handling
 anyhow = "1.0"
 thiserror = "2.0"
 
-# 日志
+# Logging
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
-# 配置解析
+# Config parsing
 toml = "0.8"
 
-# URL 编码
+# URL encoding
 urlencoding = "2.1"
 
-# Unicode 字符宽度计算
+# Unicode character width calculation
 unicode-width = "0.2"
 
-# 时间日期处理
+# Date/time handling
 chrono = "0.4"

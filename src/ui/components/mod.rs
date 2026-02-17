@@ -1,4 +1,4 @@
-/// UI 组件模块
+/// UI component modules
 pub mod alerts;
 pub mod dns;
 pub mod notifications;

@@ -1,4 +1,4 @@
-/// Overview 组件 - 系统总览
+/// Overview component - system summary
 use crate::domain::entities::AppSnapshot;
 use crate::i18n::Translate;
 use ratatui::{
@@ -12,7 +12,7 @@ use ratatui::{
 pub fn render(f: &mut Frame, area: Rect, snapshot: &AppSnapshot, t: &'static dyn Translate) {
     let mut lines = vec![];
 
-    // Surge 状态
+    // Surge status
     let surge_status_text = if snapshot.surge_running {
         format!("{} ✓", t.ui_status_running())
     } else {
@@ -32,7 +32,7 @@ pub fn render(f: &mut Frame, area: Rect, snapshot: &AppSnapshot, t: &'static dyn
         Span::styled(surge_status_text, Style::default().fg(surge_status_color)),
     ]));
 
-    // HTTP API 状态
+    // HTTP API status
     let api_status_text = if snapshot.http_api_available {
         format!("{} ✓", t.policy_available())
     } else {
@@ -52,7 +52,7 @@ pub fn render(f: &mut Frame, area: Rect, snapshot: &AppSnapshot, t: &'static dyn
         Span::styled(api_status_text, Style::default().fg(api_status_color)),
     ]));
 
-    // 出站模式（可切换）
+    // Outbound mode (switchable)
     if let Some(ref mode) = snapshot.outbound_mode {
         use crate::domain::models::OutboundMode;
         let mode_text = match mode {
@@ -73,7 +73,7 @@ pub fn render(f: &mut Frame, area: Rect, snapshot: &AppSnapshot, t: &'static dyn
         ]));
     }
 
-    // MITM 状态（可切换）
+    // MITM status (switchable)
     if snapshot.http_api_available {
         if let Some(mitm_enabled) = snapshot.mitm_enabled {
             let status_text = if mitm_enabled {
@@ -100,7 +100,7 @@ pub fn render(f: &mut Frame, area: Rect, snapshot: &AppSnapshot, t: &'static dyn
             ]));
         }
 
-        // Capture 状态（可切换）
+        // Capture status (switchable)
         if let Some(capture_enabled) = snapshot.capture_enabled {
             let status_text = if capture_enabled {
                 t.status_enabled()
@@ -127,15 +127,15 @@ pub fn render(f: &mut Frame, area: Rect, snapshot: &AppSnapshot, t: &'static dyn
         }
     }
 
-    lines.push(Line::from("")); // 空行
+    lines.push(Line::from("")); // blank line
 
-    // 统计信息
+    // Statistics
     lines.push(Line::from(vec![Span::styled(
         t.overview_stats(),
         Style::default().add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
     )]));
 
-    // 统计数据
+    // Stats data
     let stats = [
         (t.stats_policies(), snapshot.policies.len(), Color::Yellow),
         (

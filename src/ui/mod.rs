@@ -1,6 +1,6 @@
-/// UI 层 - 用户界面
+/// UI layer - user interface
 pub mod app;
 pub mod components;
 
-// 重新导出
+// Re-export
 pub use app::App;

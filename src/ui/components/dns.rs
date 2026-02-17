@@ -1,4 +1,4 @@
-/// DNS 组件 - DNS 缓存列表
+/// DNS component - DNS cache list
 use crate::domain::models::DnsRecord;
 use crate::i18n::Translate;
 use ratatui::{
@@ -18,7 +18,7 @@ pub fn render(
     search_mode: bool,
     t: &'static dyn Translate,
 ) {
-    // 根据搜索过滤记录
+    // Filter records by search query
     let filtered_records: Vec<_> = if search_query.is_empty() {
         records.iter().collect()
     } else {
@@ -29,7 +29,7 @@ pub fn render(
             .collect()
     };
 
-    // 分割区域：DNS 列表 | 详细信息
+    // Split area: DNS list | detail panel
     let chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([Constraint::Percentage(60), Constraint::Percentage(40)])
@@ -73,7 +73,7 @@ fn render_dns_list(
             Span::raw("] "),
         ])
     } else {
-        // 显示快捷键提示（btop 风格）
+        // Show shortcut key hints (btop style)
         Line::from(vec![
             Span::raw(" "),
             Span::raw(t.dns_list_title()),
@@ -147,7 +147,7 @@ fn render_dns_detail(
     let mut lines = vec![];
 
     if let Some(record) = record {
-        // 域名
+        // Domain name
         lines.push(Line::from(vec![
             Span::styled(
                 format!("{}: ", t.dns_label_domain()),
@@ -158,7 +158,7 @@ fn render_dns_detail(
 
         lines.push(Line::from(""));
 
-        // IP 地址列表
+        // IP address list
         lines.push(Line::from(vec![Span::styled(
             format!("{}: ", t.dns_label_value()),
             Style::default().add_modifier(Modifier::BOLD),
@@ -173,7 +173,7 @@ fn render_dns_detail(
 
         lines.push(Line::from(""));
 
-        // TTL (expiresTime 是 Unix 时间戳，需要转换为剩余秒数)
+        // TTL (expiresTime is a Unix timestamp; convert to remaining seconds)
         if let Some(expires_time) = record.ttl {
             use std::time::{SystemTime, UNIX_EPOCH};
             let now = SystemTime::now()

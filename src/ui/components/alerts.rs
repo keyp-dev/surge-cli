@@ -1,4 +1,4 @@
-/// Alerts 组件 - 显示警告和错误信息
+/// Alerts component - displays warnings and error messages
 use crate::domain::entities::{Alert, AlertLevel};
 use crate::i18n::Translate;
 use ratatui::{
@@ -14,7 +14,7 @@ pub fn render(f: &mut Frame, area: Rect, alerts: &[Alert], t: &'static dyn Trans
         return;
     }
 
-    // 只显示第一个 alert（最重要的）
+    // Show only the first (most important) alert
     let alert = &alerts[0];
 
     let (color, prefix) = match alert.level {
@@ -23,11 +23,11 @@ pub fn render(f: &mut Frame, area: Rect, alerts: &[Alert], t: &'static dyn Trans
         AlertLevel::Error => (Color::Red, "✖"),
     };
 
-    // 根据消息 key 翻译（domain 层使用 key，UI 层翻译）
+    // Translate by message key (domain layer uses keys; UI layer translates)
     let message = match alert.message.as_str() {
         "surge_not_running" => t.alert_surge_not_running().to_string(),
         "http_api_disabled" => t.alert_http_api_disabled().to_string(),
-        _ => alert.message.clone(), // 动态消息保持原样
+        _ => alert.message.clone(), // Dynamic messages are passed through as-is
     };
 
     let mut spans = vec![
@@ -38,7 +38,7 @@ pub fn render(f: &mut Frame, area: Rect, alerts: &[Alert], t: &'static dyn Trans
         Span::styled(message, Style::default().fg(color)),
     ];
 
-    // 添加操作提示
+    // Add action hint
     use crate::domain::entities::AlertAction;
     let action_text = match &alert.action {
         AlertAction::StartSurge => Some(t.alert_action_start_surge()),

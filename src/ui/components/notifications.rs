@@ -1,5 +1,5 @@
 use chrono::{DateTime, Local};
-/// Notifications 组件 - 右下角通知区域
+/// Notifications component - bottom-right notification area
 use ratatui::{
     layout::Rect,
     style::{Color, Modifier, Style},
@@ -8,7 +8,7 @@ use ratatui::{
     Frame,
 };
 
-/// 通知消息
+/// Notification message
 #[derive(Debug, Clone)]
 pub struct Notification {
     pub message: String,
@@ -16,7 +16,7 @@ pub struct Notification {
     pub created_at: DateTime<Local>,
 }
 
-/// 通知级别
+/// Notification level
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NotificationLevel {
     Info,
@@ -41,7 +41,7 @@ impl Notification {
         }
     }
 
-    /// 获取剩余显示时间（秒）
+    /// Get remaining display time in seconds
     pub fn remaining_time(&self) -> u64 {
         let now = Local::now();
         let elapsed = (now - self.created_at).num_seconds().max(0) as u64;
@@ -49,16 +49,16 @@ impl Notification {
     }
 }
 
-/// 渲染通知区域
+/// Render notification area
 pub fn render(f: &mut Frame, area: Rect, notifications: &[Notification]) {
     if notifications.is_empty() {
         return;
     }
 
-    // 只显示最近 5 条通知
+    // Show only the most recent 5 notifications
     let recent_notifications: Vec<_> = notifications.iter().rev().take(5).collect();
 
-    // 构建通知文本（从下往上）
+    // Build notification text (bottom to top)
     let mut lines = Vec::new();
 
     for notification in recent_notifications.iter().rev() {

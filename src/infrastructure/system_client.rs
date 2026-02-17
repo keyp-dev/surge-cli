@@ -1,22 +1,22 @@
-/// 系统命令客户端
+/// System command client
 ///
-/// 检查 Surge 进程状态、启动 Surge 等系统级操作
+/// System-level operations: checking Surge process status, starting Surge, etc.
 use crate::domain::errors::{Result, SurgeError};
 use tokio::process::Command;
 
-/// 系统命令客户端
+/// System command client
 #[derive(Clone, Copy)]
 pub struct SurgeSystemClient;
 
 impl SurgeSystemClient {
-    /// 创建新的系统客户端
+    /// Create new system client
     pub fn new() -> Self {
         Self
     }
 
-    /// 检查 Surge 是否运行
+    /// Check if Surge is running
     pub async fn is_surge_running(&self) -> bool {
-        // 使用 pgrep 检查 Surge 进程
+        // Use pgrep to check for the Surge process
         let output = Command::new("pgrep").args(["-x", "Surge"]).output().await;
 
         match output {
@@ -25,7 +25,7 @@ impl SurgeSystemClient {
         }
     }
 
-    /// 启动 Surge
+    /// Start Surge
     pub async fn start_surge(&self) -> Result<()> {
         let output = Command::new("open")
             .args(["-a", "Surge"])
@@ -42,13 +42,13 @@ impl SurgeSystemClient {
             });
         }
 
-        // 等待 Surge 启动
+        // Wait for Surge to start
         tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
 
         Ok(())
     }
 
-    /// 停止 Surge
+    /// Stop Surge
     pub async fn stop_surge(&self) -> Result<()> {
         let output = Command::new("killall")
             .arg("Surge")
@@ -71,7 +71,7 @@ impl SurgeSystemClient {
         Ok(())
     }
 
-    /// 获取 Surge 进程 PID
+    /// Get Surge process PID
     pub async fn get_surge_pid(&self) -> Option<u32> {
         let output = Command::new("pgrep")
             .args(["-x", "Surge"])
@@ -87,12 +87,12 @@ impl SurgeSystemClient {
         stdout.trim().parse().ok()
     }
 
-    /// 检查 surge-cli 是否存在
+    /// Check if surge-cli exists at the given path
     pub async fn cli_exists(&self, cli_path: &str) -> bool {
         tokio::fs::metadata(cli_path).await.is_ok()
     }
 
-    /// 检查 Surge.app 是否安装
+    /// Check if Surge.app is installed
     pub async fn surge_app_exists(&self) -> bool {
         tokio::fs::metadata("/Applications/Surge.app").await.is_ok()
     }

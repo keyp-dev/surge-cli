@@ -359,6 +359,81 @@ impl Translate for EnUS {
         "Navigation"
     }
 
+    // ---- Global shortcut lines ----
+    fn help_shortcut_quit(&self) -> &'static str {
+        "  q          - quit"
+    }
+
+    fn help_shortcut_refresh(&self) -> &'static str {
+        "  r          - refresh data"
+    }
+
+    fn help_shortcut_switch_view(&self) -> &'static str {
+        "  1-5        - switch view"
+    }
+
+    fn help_shortcut_toggle_outbound(&self) -> &'static str {
+        "  m          - toggle outbound mode"
+    }
+
+    fn help_shortcut_notification_history(&self) -> &'static str {
+        "  n          - notification history"
+    }
+
+    fn help_shortcut_devtools(&self) -> &'static str {
+        "  `          - devtools"
+    }
+
+    fn help_shortcut_help(&self) -> &'static str {
+        "  ?          - this help"
+    }
+
+    // ---- View-specific shortcut lines ----
+    fn help_shortcut_toggle_mitm(&self) -> &'static str {
+        "  i          - toggle MITM"
+    }
+
+    fn help_shortcut_toggle_capture(&self) -> &'static str {
+        "  c          - toggle capture"
+    }
+
+    fn help_shortcut_search(&self) -> &'static str {
+        "  /          - search"
+    }
+
+    fn help_shortcut_test_latency(&self) -> &'static str {
+        "  t          - test latency"
+    }
+
+    fn help_shortcut_enter_select_policy(&self) -> &'static str {
+        "  Enter      - enter/select policy"
+    }
+
+    fn help_shortcut_esc_back(&self) -> &'static str {
+        "  ESC        - back"
+    }
+
+    fn help_shortcut_toggle_group(&self) -> &'static str {
+        "  g          - toggle grouped mode"
+    }
+
+    fn help_shortcut_switch_app(&self) -> &'static str {
+        "  h/l        - switch app"
+    }
+
+    fn help_shortcut_flush_dns(&self) -> &'static str {
+        "  f          - flush DNS cache"
+    }
+
+    // ---- Navigation lines ----
+    fn help_nav_up_down(&self) -> &'static str {
+        "  j/k or ↓/↑  - move up/down"
+    }
+
+    fn help_nav_left_right(&self) -> &'static str {
+        "  h/l or ←/→  - switch app"
+    }
+
     // ========== Common Actions ==========
     fn action_select(&self) -> &'static str {
         "Select"
@@ -411,6 +486,18 @@ impl Translate for EnUS {
 
     fn confirm_kill_hint(&self) -> &'static str {
         "[Enter] Confirm  [ESC] Cancel"
+    }
+
+    fn confirm_kill_label_target(&self) -> &'static str {
+        "Target: "
+    }
+
+    fn confirm_kill_label_process(&self) -> &'static str {
+        "Process: "
+    }
+
+    fn confirm_kill_label_traffic(&self) -> &'static str {
+        "Traffic: "
     }
 
     fn notification_connection_killed(&self) -> &'static str {

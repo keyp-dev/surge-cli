@@ -138,19 +138,19 @@ impl Config {
     /// Generate example config file
     pub fn example() -> String {
         r#"[surge]
-# HTTP API 配置
+# HTTP API configuration
 http_api_host = "127.0.0.1"
 http_api_port = 6171
-http_api_key = "your-secret-key"  # 必填
+http_api_key = "your-secret-key"  # required
 
-# surge-cli 路径（可选，默认自动查找）
+# surge-cli path (optional, auto-detected by default)
 # cli_path = "/Applications/Surge.app/Contents/Applications/surge-cli"
 
 [ui]
-# UI 刷新间隔（秒）
+# UI refresh interval (seconds)
 refresh_interval = 1
 
-# 最大请求历史条数
+# Maximum request history count
 max_requests = 100
 "#
         .to_string()

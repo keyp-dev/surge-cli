@@ -1,4 +1,4 @@
-/// Requests 组件 - 请求和连接列表
+/// Requests component - request and connection list
 use crate::domain::models::Request;
 use crate::i18n::Translate;
 use ratatui::{
@@ -22,7 +22,7 @@ pub fn render(
     t: &'static dyn Translate,
 ) {
     if grouped_mode {
-        // 分组模式：按应用分组显示（支持搜索当前应用的请求）
+        // Grouped mode: display requests grouped by application (supports searching within app)
         render_grouped_view(
             f,
             area,
@@ -35,7 +35,7 @@ pub fn render(
             t,
         );
     } else {
-        // 普通模式：显示所有请求
+        // Normal mode: show all requests
         // Filter requests by search query
         let filtered_requests: Vec<_> = if search_query.is_empty() {
             requests.iter().collect()
@@ -60,7 +60,7 @@ pub fn render(
                 .collect()
         };
 
-        // 分割区域：请求列表 | 详细信息
+        // Split area: request list | detail panel
         let chunks = Layout::default()
             .direction(Direction::Horizontal)
             .constraints([Constraint::Percentage(60), Constraint::Percentage(40)])
@@ -124,7 +124,7 @@ fn render_request_list(
             Span::raw(t.action_group()),
         ];
 
-        // Connections 视图显示终止连接快捷键
+        // Connections view: show kill connection shortcut
         if is_connection_view {
             spans.push(Span::raw(" ["));
             spans.push(Span::styled("k", Style::default().fg(Color::Yellow)));
@@ -145,16 +145,16 @@ fn render_request_list(
 
     let items: Vec<ListItem> = requests
         .iter()
-        .take(50) // 限制显示数量
+        .take(50) // Limit displayed count
         .map(|req| {
-            // URL 截断到 35 字符
+            // Truncate URL to 35 characters
             let url = req
                 .url
                 .as_ref()
                 .map(|u| truncate_text(u, 35))
                 .unwrap_or_else(|| "Unknown".to_string());
 
-            // 策略名截断到 25 字符
+            // Truncate policy name to 25 characters
             let policy = req
                 .policy_name
                 .as_ref()
@@ -164,7 +164,7 @@ fn render_request_list(
             let upload_kb = req.out_bytes / 1024;
             let download_kb = req.in_bytes / 1024;
 
-            // 状态指示器
+            // Status indicator
             let status_char = if req.completed {
                 "✓"
             } else if req.failed {
@@ -221,7 +221,7 @@ fn render_request_list(
     f.render_stateful_widget(list, area, &mut state);
 }
 
-/// 截断文本
+/// Truncate text to a maximum character count
 fn truncate_text(text: &str, max_len: usize) -> String {
     if text.chars().count() <= max_len {
         text.to_string()
@@ -231,19 +231,19 @@ fn truncate_text(text: &str, max_len: usize) -> String {
     }
 }
 
-/// 计算字符串的显示宽度（简化版：非ASCII字符算2宽度）
+/// Compute display width of a string (simplified: non-ASCII chars count as width 2)
 fn display_width(text: &str) -> usize {
     text.chars().map(|c| if c.is_ascii() { 1 } else { 2 }).sum()
 }
 
-/// 填充字符串到固定显示宽度（处理中英文混合）
+/// Pad a string to a fixed display width (handles mixed CJK/ASCII)
 fn pad_to_width(text: &str, width: usize) -> String {
     let current_width = display_width(text);
     if current_width >= width {
-        // 已经超过宽度，返回原文本
+        // Already at or over target width, return as-is
         text.to_string()
     } else {
-        // 填充空格到目标宽度
+        // Pad with spaces to reach target width
         format!("{}{}", text, " ".repeat(width - current_width))
     }
 }
@@ -255,7 +255,7 @@ fn render_request_detail(
     selected: usize,
     t: &'static dyn Translate,
 ) {
-    // 获取选中的请求
+    // Get the selected request
     let request = if selected < requests.len().min(50) {
         requests[selected]
     } else {
@@ -270,7 +270,7 @@ fn render_request_detail(
 
     let mut lines = vec![];
 
-    // 状态标题
+    // Status header
     let status_symbol = if request.completed {
         (t.request_status_completed(), Color::Green)
     } else if request.failed {
@@ -299,7 +299,7 @@ fn render_request_detail(
         lines.push(Line::from(""));
     }
 
-    // 方法和状态
+    // Method and status
     let method_status = format!(
         "{} → {}",
         request.method.as_ref().unwrap_or(&"GET".to_string()),
@@ -313,7 +313,7 @@ fn render_request_detail(
         Span::styled(method_status, Style::default().fg(Color::Yellow)),
     ]));
 
-    // 远程主机
+    // Remote host
     if let Some(ref host) = request.remote_host {
         lines.push(Line::from(vec![
             Span::styled(
@@ -326,7 +326,7 @@ fn render_request_detail(
 
     lines.push(Line::from(""));
 
-    // 规则
+    // Rule
     if let Some(ref rule) = request.rule {
         lines.push(Line::from(vec![
             Span::styled(
@@ -337,7 +337,7 @@ fn render_request_detail(
         ]));
     }
 
-    // 策略
+    // Policy
     if let Some(ref policy) = request.policy_name {
         lines.push(Line::from(vec![
             Span::styled(
@@ -350,7 +350,7 @@ fn render_request_detail(
 
     lines.push(Line::from(""));
 
-    // 流量统计
+    // Traffic statistics
     lines.push(Line::from(vec![Span::styled(
         t.request_label_traffic(),
         Style::default().add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
@@ -373,7 +373,7 @@ fn render_request_detail(
         ),
     ]));
 
-    // 进程路径
+    // Process path
     if let Some(ref process) = request.process_path {
         lines.push(Line::from(""));
         lines.push(Line::from(vec![Span::styled(
@@ -386,10 +386,10 @@ fn render_request_detail(
         )]));
     }
 
-    // 时间戳
+    // Timestamp
     if let Some(timestamp) = request.start_date {
         lines.push(Line::from(""));
-        // 将 Unix 时间戳转换为可读格式
+        // Convert Unix timestamp to human-readable format
         use std::time::UNIX_EPOCH;
         let duration = std::time::Duration::from_secs_f64(timestamp);
         if let Some(time) = UNIX_EPOCH.checked_add(duration) {
@@ -413,7 +413,7 @@ fn render_request_detail(
         }
     }
 
-    // HTTP Body 标记
+    // HTTP Body indicator
     if request.stream_has_request_body || request.stream_has_response_body {
         lines.push(Line::from(""));
         lines.push(Line::from(vec![Span::styled(
@@ -437,7 +437,7 @@ fn render_request_detail(
         }
     }
 
-    // Notes（连接日志）
+    // Notes (connection log)
     if !request.notes.is_empty() {
         lines.push(Line::from(""));
         lines.push(Line::from(vec![Span::styled(
@@ -445,13 +445,13 @@ fn render_request_detail(
             Style::default().add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
         )]));
 
-        // 只显示前 10 条 notes，避免面板过长
+        // Show only first 10 notes to avoid overly long panel
         for (i, note) in request.notes.iter().take(10).enumerate() {
-            // 解析 note 并高亮关键信息
+            // Parse note and highlight key information
             let styled_note = format_note(note, t);
             lines.push(Line::from(styled_note));
 
-            // 每 3 条添加空行，增强可读性
+            // Add blank line every 3 entries for readability
             if i % 3 == 2 && i < request.notes.len().min(10) - 1 {
                 lines.push(Line::from(""));
             }
@@ -482,9 +482,9 @@ fn render_request_detail(
     f.render_widget(paragraph, area);
 }
 
-/// 格式化单条 note，高亮关键信息
+/// Format a single note entry with highlighted key information
 fn format_note(note: &str, _t: &'static dyn Translate) -> Vec<Span<'static>> {
-    // 解析时间戳和标签
+    // Parse timestamp and tag
     let parts: Vec<&str> = note.splitn(2, ' ').collect();
     if parts.len() < 2 {
         return vec![Span::raw(note.to_string())];
@@ -493,25 +493,25 @@ fn format_note(note: &str, _t: &'static dyn Translate) -> Vec<Span<'static>> {
     let timestamp = parts[0];
     let rest = parts[1];
 
-    // 提取标签（如 [Connection], [TLS], [Rule] 等）
+    // Extract tag (e.g. [Connection], [TLS], [Rule])
     let mut spans = vec![];
 
-    // 添加时间戳（灰色）
+    // Add timestamp in gray
     spans.push(Span::styled(
         format!("{} ", timestamp),
         Style::default().fg(Color::DarkGray),
     ));
 
-    // 解析标签和内容
+    // Parse tag and content
     if let Some(tag_start) = rest.find('[') {
         if let Some(tag_end) = rest.find(']') {
             if tag_end > tag_start {
-                // 标签前的内容
+                // Content before tag
                 if tag_start > 0 {
                     spans.push(Span::raw(rest[..tag_start].to_string()));
                 }
 
-                // 标签内容（高亮）
+                // Tag content (highlighted)
                 let tag = &rest[tag_start..=tag_end];
                 let tag_color = match tag {
                     "[Connection]" => Color::Cyan,
@@ -528,7 +528,7 @@ fn format_note(note: &str, _t: &'static dyn Translate) -> Vec<Span<'static>> {
                     Style::default().fg(tag_color).add_modifier(Modifier::BOLD),
                 ));
 
-                // 标签后的内容
+                // Content after tag
                 if tag_end + 1 < rest.len() {
                     spans.push(Span::raw(rest[tag_end + 1..].to_string()));
                 }
@@ -538,12 +538,12 @@ fn format_note(note: &str, _t: &'static dyn Translate) -> Vec<Span<'static>> {
         }
     }
 
-    // 如果没有标签，直接显示内容
+    // No tag found: render content as-is
     spans.push(Span::raw(rest.to_string()));
     spans
 }
 
-/// 渲染分组视图（按应用分组）
+/// Render grouped view (requests grouped by application)
 fn render_grouped_view(
     f: &mut Frame,
     area: Rect,
@@ -557,50 +557,50 @@ fn render_grouped_view(
 ) {
     use std::collections::HashMap;
 
-    // 按 process_path 分组
+    // Group by process_path
     let mut app_groups: HashMap<String, Vec<&Request>> = HashMap::new();
     for req in requests {
         let app_name = req
             .process_path
             .as_ref()
             .map(|p| {
-                // 提取应用名称（去掉路径）
+                // Extract app name (strip path prefix)
                 p.split('/').last().unwrap_or(p).to_string()
             })
             .unwrap_or_else(|| "Unknown".to_string());
         app_groups.entry(app_name).or_default().push(req);
     }
 
-    // 排序应用列表（按请求数量降序，数量相同时按名称字母序）
+    // Sort app list (descending by request count, then alphabetically by name)
     let mut apps: Vec<(String, usize)> = app_groups
         .iter()
         .map(|(name, reqs)| (name.clone(), reqs.len()))
         .collect();
     apps.sort_by(|a, b| {
-        // 先按数量降序
+        // Descending by count
         match b.1.cmp(&a.1) {
             std::cmp::Ordering::Equal => {
-                // 数量相同时按名称升序（字母序）
+                // Ascending by name when counts are equal
                 a.0.cmp(&b.0)
             }
             other => other,
         }
     });
 
-    // 三列布局：应用列表 | 请求列表 | 详细信息
+    // Three-column layout: app list | request list | detail panel
     let chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([
-            Constraint::Percentage(25), // 应用列表
-            Constraint::Percentage(45), // 请求列表
-            Constraint::Percentage(30), // 详细信息
+            Constraint::Percentage(25), // App list
+            Constraint::Percentage(45), // Request list
+            Constraint::Percentage(30), // Detail panel
         ])
         .split(area);
 
-    // 渲染应用列表
+    // Render app list
     render_app_list(f, chunks[0], &apps, app_selected, t);
 
-    // 获取选中的应用及其请求
+    // Get selected app and its requests
     if app_selected < apps.len() {
         let (selected_app_name, _) = &apps[app_selected];
         let app_requests: Vec<_> = app_groups
@@ -610,7 +610,7 @@ fn render_grouped_view(
             .copied()
             .collect();
 
-        // 渲染该应用的请求列表（支持搜索，会在内部过滤）
+        // Render request list for this app (filtering happens internally)
         render_app_request_list(
             f,
             chunks[1],
@@ -623,8 +623,7 @@ fn render_grouped_view(
             t,
         );
 
-        // 渲染请求详情（使用过滤后的请求）
-        // 需要在这里也做同样的过滤，保持和列表一致
+        // Render request detail (using the same filtered requests as the list)
         let filtered_app_requests: Vec<_> = if search_query.is_empty() {
             app_requests
         } else {
@@ -646,7 +645,7 @@ fn render_grouped_view(
 
         render_request_detail(f, chunks[2], &filtered_app_requests, request_selected, t);
     } else {
-        // 没有选中应用
+        // No app selected
         let empty = Paragraph::new(t.request_no_app_selected()).block(
             Block::default()
                 .borders(Borders::ALL)
@@ -663,7 +662,7 @@ fn render_grouped_view(
     }
 }
 
-/// 渲染应用列表
+/// Render application list
 fn render_app_list(
     f: &mut Frame,
     area: Rect,
@@ -726,7 +725,7 @@ fn render_app_list(
     f.render_stateful_widget(list, area, &mut state);
 }
 
-/// 渲染应用的请求列表
+/// Render request list for an application
 fn render_app_request_list(
     f: &mut Frame,
     area: Rect,
@@ -738,7 +737,7 @@ fn render_app_request_list(
     is_connection_view: bool,
     t: &'static dyn Translate,
 ) {
-    // 标题显示搜索状态
+    // Title shows search state
     let title = if search_mode {
         Line::from(vec![
             Span::raw(" "),
@@ -790,7 +789,7 @@ fn render_app_request_list(
             Span::raw(t.action_search()),
         ];
 
-        // Connections 视图显示终止连接快捷键
+        // Connections view: show kill connection shortcut
         if is_connection_view {
             spans.push(Span::raw(" ["));
             spans.push(Span::styled("k", Style::default().fg(Color::Yellow)));
@@ -802,7 +801,7 @@ fn render_app_request_list(
         Line::from(spans)
     };
 
-    // 根据搜索查询过滤请求
+    // Filter requests by search query
     let filtered_requests: Vec<_> = if search_query.is_empty() {
         requests.iter().copied().collect()
     } else {
@@ -834,7 +833,7 @@ fn render_app_request_list(
         .iter()
         .take(50)
         .map(|req| {
-            // URL 截断到 30 字符
+            // Truncate URL to 30 characters
             let url = req
                 .url
                 .as_ref()
@@ -844,7 +843,7 @@ fn render_app_request_list(
             let upload_kb = req.out_bytes / 1024;
             let download_kb = req.in_bytes / 1024;
 
-            // 状态指示器
+            // Status indicator
             let status_char = if req.completed {
                 "✓"
             } else if req.failed {

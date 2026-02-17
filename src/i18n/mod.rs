@@ -1,23 +1,24 @@
-mod en_us;
-/// 多语言支持模块
+/// Internationalization (i18n) module
 ///
-/// 基于 trait 的编译时翻译选择，零运行时开销
+/// Compile-time language selection with zero runtime overhead.
+/// Specified via Cargo feature: `--features zh-cn` or `--features en-us`
+mod en_us;
 mod zh_cn;
 
 pub use en_us::EnUS;
 pub use zh_cn::ZhCN;
 
-/// 翻译接口
+/// Translation interface
 ///
-/// 所有文本通过此 trait 提供，支持编译时类型检查
+/// All UI text is provided through this trait, with compile-time type checking
 pub trait Translate: Send + Sync {
-    // ========== UI 状态栏 ==========
+    // ========== UI Status Bar ==========
     fn ui_status_running(&self) -> &'static str;
     fn ui_status_stopped(&self) -> &'static str;
     fn ui_status_http_api(&self) -> &'static str;
     fn ui_status_cli_mode(&self) -> &'static str;
 
-    // ========== 快捷键说明 ==========
+    // ========== Keyboard Shortcuts ==========
     fn key_quit(&self) -> &'static str;
     fn key_refresh(&self) -> &'static str;
     fn key_view(&self) -> &'static str;
@@ -28,23 +29,23 @@ pub trait Translate: Send + Sync {
     fn key_start(&self) -> &'static str;
     fn key_reload(&self) -> &'static str;
 
-    // ========== 视图标题 ==========
+    // ========== View Titles ==========
     fn views_title(&self) -> &'static str;
     fn view_overview(&self) -> &'static str;
     fn view_policies(&self) -> &'static str;
     fn view_requests(&self) -> &'static str;
     fn view_connections(&self) -> &'static str;
 
-    // ========== 通知消息 ==========
+    // ========== Notification Messages ==========
     fn notification_test_started(&self) -> &'static str;
     fn notification_test_completed(&self, alive: usize, total: usize) -> String;
     fn notification_test_failed(&self, error: &str) -> String;
 
-    // ========== Alert 消息 ==========
+    // ========== Alert Messages ==========
     fn alert_surge_not_running(&self) -> &'static str;
     fn alert_http_api_disabled(&self) -> &'static str;
 
-    // ========== 策略组 ==========
+    // ========== Policy Groups ==========
     fn policy_group_title(&self) -> &'static str;
     fn policy_group_enter_hint(&self) -> &'static str;
     fn policy_policies_title(&self, group_name: &str) -> String;
@@ -61,7 +62,7 @@ pub trait Translate: Send + Sync {
     fn devtools_title(&self) -> &'static str;
     fn devtools_no_logs(&self) -> &'static str;
 
-    // ========== 通知历史 ==========
+    // ========== Notification History ==========
     fn notification_history_title(&self) -> &'static str;
     fn notification_history_empty(&self) -> &'static str;
 
@@ -126,7 +127,29 @@ pub trait Translate: Send + Sync {
     fn help_view_section(&self) -> &'static str;
     fn help_navigation_section(&self) -> &'static str;
 
-    // ========== 通用操作词 ==========
+    // ---- Global shortcut lines ----
+    fn help_shortcut_quit(&self) -> &'static str;
+    fn help_shortcut_refresh(&self) -> &'static str;
+    fn help_shortcut_switch_view(&self) -> &'static str;
+    fn help_shortcut_toggle_outbound(&self) -> &'static str;
+    fn help_shortcut_notification_history(&self) -> &'static str;
+    fn help_shortcut_devtools(&self) -> &'static str;
+    fn help_shortcut_help(&self) -> &'static str;
+    // ---- View-specific shortcut lines ----
+    fn help_shortcut_toggle_mitm(&self) -> &'static str;
+    fn help_shortcut_toggle_capture(&self) -> &'static str;
+    fn help_shortcut_search(&self) -> &'static str;
+    fn help_shortcut_test_latency(&self) -> &'static str;
+    fn help_shortcut_enter_select_policy(&self) -> &'static str;
+    fn help_shortcut_esc_back(&self) -> &'static str;
+    fn help_shortcut_toggle_group(&self) -> &'static str;
+    fn help_shortcut_switch_app(&self) -> &'static str;
+    fn help_shortcut_flush_dns(&self) -> &'static str;
+    // ---- Navigation lines ----
+    fn help_nav_up_down(&self) -> &'static str;
+    fn help_nav_left_right(&self) -> &'static str;
+
+    // ========== Common Action Labels ==========
     fn action_select(&self) -> &'static str;
     fn action_enter(&self) -> &'static str;
     fn action_confirm(&self) -> &'static str;
@@ -138,14 +161,17 @@ pub trait Translate: Send + Sync {
     fn action_mode(&self) -> &'static str;
     fn action_kill(&self) -> &'static str;
 
-    // ========== 连接终止确认 ==========
+    // ========== Kill Connection Confirmation ==========
     fn confirm_kill_title(&self) -> &'static str;
     fn confirm_kill_message(&self, url: &str) -> String;
     fn confirm_kill_hint(&self) -> &'static str;
+    fn confirm_kill_label_target(&self) -> &'static str;
+    fn confirm_kill_label_process(&self) -> &'static str;
+    fn confirm_kill_label_traffic(&self) -> &'static str;
     fn notification_connection_killed(&self) -> &'static str;
     fn notification_kill_failed(&self, error: &str) -> String;
 
-    // ========== 功能开关 ==========
+    // ========== Feature Toggles ==========
     fn feature_mitm(&self) -> &'static str;
     fn feature_capture(&self) -> &'static str;
     fn status_enabled(&self) -> &'static str;
@@ -169,31 +195,19 @@ pub trait Translate: Send + Sync {
     fn notification_dns_flush_failed(&self, error: &str) -> String;
 }
 
-// 编译时语言选择
-#[cfg(feature = "lang-zh-cn")]
-pub type CurrentLang = ZhCN;
+// Compile-time language selection (zero runtime overhead):
+//   cargo build              → en-us (default)
+//   cargo build --features zh-cn  → zh-cn
 
-#[cfg(feature = "lang-en-us")]
-pub type CurrentLang = EnUS;
-
-// 如果没有指定语言特性，默认使用中文
-#[cfg(not(any(feature = "lang-zh-cn", feature = "lang-en-us")))]
-pub type CurrentLang = ZhCN;
-
-/// 获取当前语言实例
-#[cfg(feature = "lang-zh-cn")]
-pub fn current() -> &'static dyn Translate {
-    static INSTANCE: ZhCN = ZhCN;
-    &INSTANCE
-}
-
-#[cfg(feature = "lang-en-us")]
+/// Get current language instance (zero runtime overhead)
+#[cfg(not(feature = "zh-cn"))]
 pub fn current() -> &'static dyn Translate {
     static INSTANCE: EnUS = EnUS;
     &INSTANCE
 }
 
-#[cfg(not(any(feature = "lang-zh-cn", feature = "lang-en-us")))]
+/// Get current language instance (zero runtime overhead)
+#[cfg(feature = "zh-cn")]
 pub fn current() -> &'static dyn Translate {
     static INSTANCE: ZhCN = ZhCN;
     &INSTANCE
